@@ -1,0 +1,25 @@
+# Android / Gradle local configuration
+.gradle/
+build/
+**/build/
+local.properties
+*.jks
+*.keystore
+*.p12
+*.pfx
+
+# Local secrets and machine-specific Gradle overrides
+gradle.local.properties
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Generated diagnostics
+*.log

@@ -1,0 +1,60 @@
+# Project Status
+
+> **Last updated:** 2026-07-26
+> **Phase:** Open-stack MVP architecture accepted; Android scaffold and first domain slice are in progress.
+> **Overall state:** No Mapbox credential is required for V1. The active scope is a local-GPX route-following pacenote companion, not general navigation.
+
+## Completed
+
+- [x] Feasibility research: Mapbox versus OSM/self-hosted navigation options.
+- [x] V1 architecture superseded: credential-free local GPX route-following companion; Mapbox runtime is not required.
+- [x] Sol architecture review completed; scope, safety, lifecycle, GPX qualification, and data/licensing corrections accepted.
+- [x] Safety and scope boundaries documented.
+- [x] Full implementation plan authored in Hermes planning workspace.
+- [x] Original Rally Technical Dossier visual direction created.
+- [x] HTML inspiration board with locally stored source assets created.
+- [x] Compose-specific visual/component translation documented.
+- [x] External design-reference policy and source provenance documented.
+- [x] Local Git repository initialized; all current project files are staged.
+- [x] Android/Gradle scaffold verified with the constrained local toolchain: `:app:assembleDebug` succeeds.
+- [x] First provider-neutral TDD slice: `GeoPoint` and immutable `RouteGeometry` invariants, including defensive input-list copying; Luna RED→GREEN evidence and Sol re-review passed.
+
+## Not started
+
+- [ ] Extend provider-neutral domain models with progress/pacenote events and deterministic IDs.
+- [ ] GPX parser/qualification, geometry classifier, deterministic replay, stateful location matcher, UI, speech, foreground service, and field test.
+
+## Current blockers / required inputs
+
+| Item | Owner | Why it matters | Resolution |
+|---|---|---|---|
+| Local Git author identity | User / environment owner | First local commit currently fails | Set `git config user.name` and `git config user.email` for this repo or globally. |
+| Initial field-test region and lawful GPX sources | Product owner | Needed for representative, directionally correct route fixtures | Choose a region and 10–20 routes; preserve source/license/provenance for non-original GPX data. |
+| Physical Android test device | Product owner / developer | Needed to validate location, foreground service, TTS, Bluetooth, and screen-off behavior | Select at least one API-26+ physical device before field gate. |
+
+## Immediate next action
+
+**P0-01/P0-03: Verify the Android scaffold, then complete the first provider-neutral domain-model TDD slice.**
+
+Do not add Mapbox, public OSM tiles, OSRM demo endpoints, Google Play Services, `INTERNET` permission, credentials, or secret configuration to V1.
+
+## Files a future contributor should read first
+
+1. [`README.md`](../README.md)
+2. [`PROJECT-CHARTER.md`](PROJECT-CHARTER.md)
+3. [`BACKLOG.md`](BACKLOG.md)
+4. [`DECISIONS.md`](DECISIONS.md)
+5. [`SESSION-HANDOFF.md`](SESSION-HANDOFF.md)
+6. [`../design/compose-technical-dossier-translation.md`](../design/compose-technical-dossier-translation.md)
+
+## Source-of-truth locations
+
+| Topic | Location |
+|---|---|
+| Repository | `/home/hermes/rally-pacenotes-android/` |
+| Current project documents | `docs/` in repository |
+| Full implementation plan | `/home/hermes/.hermes/plans/2026-07-25_031255-rally-pacenote-android-mvp.md` |
+| Visual inspiration board | `design/rally-technical-dossier-inspo.html` |
+| Compose visual blueprint | `design/compose-technical-dossier-translation.md` |
+
+The full plan exists outside the repository; use `BACKLOG.md` and this status file as the portable execution summary.
