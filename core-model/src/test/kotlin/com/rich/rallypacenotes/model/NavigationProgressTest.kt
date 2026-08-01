@@ -54,6 +54,7 @@ class PacenoteTest {
         routeDistanceMeters: Double = 250.0,
         direction: PacenoteDirection = PacenoteDirection.LEFT,
         severity: Int = 4,
+        confidence: Double = 0.8,
         classifierVersion: String = "classifier-1",
     ) = Pacenote.create(
         routeId = routeId,
@@ -61,13 +62,26 @@ class PacenoteTest {
         routeDistanceMeters = routeDistanceMeters,
         direction = direction,
         severity = severity,
-        confidence = 0.8,
+        confidence = confidence,
         classifierVersion = classifierVersion,
     )
 
     @Test
-    fun sameInputsProduceSameStableId() {
-        assertEquals(validPacenote().id, validPacenote().id)
+    fun sameInputsProduceDocumentedSha256Id() {
+        val pacenote = validPacenote()
+
+        assertEquals(
+            "f326ce50f22e84742f7dfaed22e32473f7930f78f71ffe97099bea23ba9b2761",
+            pacenote.id,
+        )
+        assertEquals(64, pacenote.id.length)
+        assert(pacenote.id.all { it in '0'..'9' || it in 'a'..'f' })
+        assertEquals(pacenote.id, validPacenote().id)
+    }
+
+    @Test
+    fun confidenceIsNonIdentityMetadata() {
+        assertEquals(validPacenote(confidence = 0.0).id, validPacenote(confidence = 1.0).id)
     }
 
     @Test
@@ -83,23 +97,23 @@ class PacenoteTest {
     }
 
     @Test
+    fun acceptsPacenoteValueBoundaries() {
+        assertEquals(0.0, validPacenote(routeDistanceMeters = 0.0, severity = 1, confidence = 0.0).routeDistanceMeters)
+        assertEquals(6, validPacenote(severity = 6, confidence = 1.0).severity)
+    }
+
+    @Test
     fun rejectsInvalidEventInputs() {
         assertFailsWith<IllegalArgumentException> { validPacenote(routeId = " ") }
         assertFailsWith<IllegalArgumentException> { validPacenote(classifierVersion = " ") }
         assertFailsWith<IllegalArgumentException> { validPacenote(routeDistanceMeters = Double.NaN) }
+        assertFailsWith<IllegalArgumentException> { validPacenote(routeDistanceMeters = Double.POSITIVE_INFINITY) }
+        assertFailsWith<IllegalArgumentException> { validPacenote(routeDistanceMeters = Double.NEGATIVE_INFINITY) }
         assertFailsWith<IllegalArgumentException> { validPacenote(routeDistanceMeters = -0.1) }
         assertFailsWith<IllegalArgumentException> { validPacenote(severity = 0) }
         assertFailsWith<IllegalArgumentException> { validPacenote(severity = 7) }
-        assertFailsWith<IllegalArgumentException> {
-            Pacenote.create(
-                routeId = "stage-1",
-                routeRevision = RouteRevision("revision-1"),
-                routeDistanceMeters = 250.0,
-                direction = PacenoteDirection.LEFT,
-                severity = 4,
-                confidence = 1.1,
-                classifierVersion = "classifier-1",
-            )
+        listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, -0.01, 1.01).forEach { confidence ->
+            assertFailsWith<IllegalArgumentException> { validPacenote(confidence = confidence) }
         }
     }
 }
