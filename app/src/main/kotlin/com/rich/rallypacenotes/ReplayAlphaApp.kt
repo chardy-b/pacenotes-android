@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.rich.rallypacenotes.replay.ReplayAlphaFixture
 import com.rich.rallypacenotes.replay.ReplayController
+import com.rich.rallypacenotes.ui.RouteCanvas
 
 @Composable
 fun ReplayAlphaApp() {
@@ -39,6 +40,11 @@ fun ReplayAlphaApp() {
             ) {
                 Text("Replay Alpha — Not for Driving", style = MaterialTheme.typography.headlineSmall)
                 Text("Route fixture: ${ReplayAlphaFixture.name}", modifier = Modifier.semantics { contentDescription = "route fixture name" })
+                RouteCanvas(
+                    route = ReplayAlphaFixture.route,
+                    currentDistanceMeters = state.currentDistanceMeters,
+                    candidates = ReplayAlphaFixture.candidates,
+                )
                 Text("Status: ${state.status.name.lowercase()} | Current distance: ${"%.1f".format(state.currentDistanceMeters)} m", modifier = Modifier.semantics { contentDescription = "replay status and current distance" })
                 Text(candidateText, modifier = Modifier.semantics { contentDescription = "geometry-only detected candidate" })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 16.dp)) {
