@@ -13,8 +13,8 @@
 |---|---|---|---:|---|
 | P0-01 | Scaffold Kotlin/Compose Android project; add Git-safe ignore/config files | None | 8k–15k | `./gradlew :app:assembleDebug` succeeds with no secrets tracked. |
 | P0-02 | Record the credential-free GPX runtime decision; update charter/status/safety wording | P0-01 | 4k–8k | ADR, scope, and README describe a GPX route-following companion rather than ordinary navigation. |
-| P0-03 | Create provider-neutral route/progress/pacenote domain models | P0-01 | 10k–18k | Unit tests cover model invariants and deterministic IDs. |
-| P0-04 | Implement geometry normalization and distance/heading primitives | P0-03 | 16k–28k | Fixture-driven tests cover meter projection, resampling, duplicates, and discontinuities. |
+| P0-03 | ✅ Create provider-neutral route/progress/pacenote domain models | P0-01 | 10k–18k | Completed 2026-08-01: unit tests cover model invariants and deterministic IDs. |
+| P0-04 | Implement geometry normalization and distance/heading primitives | P0-03 | 16k–28k | Fixture-driven tests cover meter projection, resampling, duplicates, and discontinuities. **Next.** |
 | P0-05 | Build conservative curve detection/classification | P0-04 | 28k–45k | Tests cover straight, gentle/sharp, S-bend, digitization noise, junction, and roundabout-like fixtures. |
 | P0-06 | Add stateful GPX location matcher and route-revision handling | P0-03 + P0-04 | 20k–35k | Simulated route-following session produces neutral progress; ambiguity/off-route pauses speech without invented rerouting. |
 | P0-07 | Implement original Compose theme and static navigation screen | P0-01 + P0-03 | 20k–35k | UI/semantics tests cover pacenote card, state bar, 200% font scale, and direction not-color-only. |

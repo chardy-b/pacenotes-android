@@ -1,7 +1,7 @@
 # Project Status
 
-> **Last updated:** 2026-07-26
-> **Phase:** Open-stack MVP architecture accepted; Android scaffold and first domain slice are in progress.
+> **Last updated:** 2026-08-01
+> **Phase:** Open-stack MVP foundation; provider-neutral route/progress/pacenote domain boundary complete.
 > **Overall state:** No Mapbox credential is required for V1. The active scope is a local-GPX route-following pacenote companion, not general navigation.
 
 ## Completed
@@ -15,13 +15,13 @@
 - [x] HTML inspiration board with locally stored source assets created.
 - [x] Compose-specific visual/component translation documented.
 - [x] External design-reference policy and source provenance documented.
-- [x] Local Git repository initialized; all current project files are staged.
+- [x] Local Git repository initialized; initial credential-free MVP commit created.
 - [x] Android/Gradle scaffold verified with the constrained local toolchain: `:app:assembleDebug` succeeds.
 - [x] First provider-neutral TDD slice: `GeoPoint` and immutable `RouteGeometry` invariants, including defensive input-list copying; Luna RED→GREEN evidence and Sol re-review passed.
+- [x] Provider-neutral route state slice: validated `RouteRevision` and `MatchedRoutePosition`; explicit navigation statuses/progress invariants; and deterministic, caller-independent pacenote event IDs. Focused RED→GREEN tests and full JVM/debug-APK verification passed.
 
 ## Not started
 
-- [ ] Extend provider-neutral domain models with progress/pacenote events and deterministic IDs.
 - [ ] GPX parser/qualification, geometry classifier, deterministic replay, stateful location matcher, UI, speech, foreground service, and field test.
 
 ## Current blockers / required inputs
@@ -34,7 +34,9 @@
 
 ## Immediate next action
 
-**P0-01/P0-03: Verify the Android scaffold, then complete the first provider-neutral domain-model TDD slice.**
+**P0-04: Implement deterministic geometry normalization and distance/heading primitives using the completed provider-neutral models.**
+
+The current source plan is [`docs/plans/2026-08-01-p0-03-route-progress-pacenote-domain.md`](plans/2026-08-01-p0-03-route-progress-pacenote-domain.md); P0-04 needs its own test strategy and exact module/files before production code.
 
 Do not add Mapbox, public OSM tiles, OSRM demo endpoints, Google Play Services, `INTERNET` permission, credentials, or secret configuration to V1.
 
