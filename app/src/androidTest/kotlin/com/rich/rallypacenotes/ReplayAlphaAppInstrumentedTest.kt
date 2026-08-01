@@ -20,5 +20,9 @@ class ReplayAlphaAppInstrumentedTest {
         composeTestRule.onNodeWithContentDescription("geometry-only detected candidate").assertExists()
         composeTestRule.onNodeWithContentDescription("Start replay").performClick()
         composeTestRule.onNodeWithText("Status: running | Current distance: 20.0 m").assertExists()
+        composeTestRule.onNodeWithContentDescription("Pause replay").performClick()
+        composeTestRule.onNodeWithText("Status: paused | Current distance: 20.0 m").assertExists()
+        composeTestRule.onNodeWithContentDescription("Reset replay").performClick()
+        composeTestRule.onNodeWithText("Status: stopped | Current distance: 0.0 m").assertExists()
     }
 }

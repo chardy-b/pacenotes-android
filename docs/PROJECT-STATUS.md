@@ -1,7 +1,7 @@
 # Project Status
 
 > **Last updated:** 2026-08-01
-> **Phase:** Open-stack MVP geometry foundation; deterministic normalization primitives complete.
+> **Phase:** Replay Alpha is buildable and launchable; physical-device validation remains pending.
 > **Overall state:** No Mapbox credential is required for V1. The active scope is a local-GPX route-following pacenote companion, not general navigation.
 
 ## Completed
