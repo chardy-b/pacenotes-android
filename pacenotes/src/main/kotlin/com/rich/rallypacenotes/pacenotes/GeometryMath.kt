@@ -1,7 +1,6 @@
 package com.rich.rallypacenotes.pacenotes
 
 import com.rich.rallypacenotes.model.GeoPoint
-import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -15,10 +14,15 @@ object GeometryMath {
         val longitudeDeltaRadians = Math.toRadians(to.longitude - from.longitude)
         val fromLatitudeRadians = Math.toRadians(from.latitude)
         val toLatitudeRadians = Math.toRadians(to.latitude)
-        val halfChordSquared = sin(latitudeDeltaRadians / 2.0) * sin(latitudeDeltaRadians / 2.0) +
-            cos(fromLatitudeRadians) * cos(toLatitudeRadians) *
-            sin(longitudeDeltaRadians / 2.0) * sin(longitudeDeltaRadians / 2.0)
-        val angularDistanceRadians = 2.0 * asin(sqrt(halfChordSquared))
+        val halfChordSquared = (
+            sin(latitudeDeltaRadians / 2.0) * sin(latitudeDeltaRadians / 2.0) +
+                cos(fromLatitudeRadians) * cos(toLatitudeRadians) *
+                sin(longitudeDeltaRadians / 2.0) * sin(longitudeDeltaRadians / 2.0)
+            ).coerceIn(0.0, 1.0)
+        val angularDistanceRadians = 2.0 * atan2(
+            sqrt(halfChordSquared),
+            sqrt(1.0 - halfChordSquared),
+        )
 
         return MEAN_EARTH_RADIUS_METERS * angularDistanceRadians
     }

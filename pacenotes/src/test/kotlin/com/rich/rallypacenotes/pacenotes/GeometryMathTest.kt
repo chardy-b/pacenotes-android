@@ -25,6 +25,22 @@ class GeometryMathTest {
     }
 
     @Test
+    fun distanceHandlesAntimeridianAndNearAntipodalPoints() {
+        val antimeridianDistance = GeometryMath.distanceMeters(
+            from = GeoPoint(0.0, 179.5),
+            to = GeoPoint(0.0, -179.5),
+        )
+        val nearAntipodalDistance = GeometryMath.distanceMeters(
+            from = GeoPoint(0.0, 0.0),
+            to = GeoPoint(0.000001, 179.999999),
+        )
+
+        assertTrue(antimeridianDistance in 111_000.0..112_000.0)
+        assertTrue(nearAntipodalDistance.isFinite())
+        assertTrue(nearAntipodalDistance in 20_000_000.0..20_020_000.0)
+    }
+
+    @Test
     fun initialHeadingUsesNorthClockwiseDegrees() {
         assertTrue(
             GeometryMath.initialHeadingDegrees(GeoPoint(0.0, 0.0), GeoPoint(0.0, 1.0)) in 89.9..90.1,
@@ -48,6 +64,7 @@ class GeometryMathTest {
         assertEquals(20.0, GeometryMath.signedHeadingDeltaDegrees(350.0, 10.0))
         assertEquals(-20.0, GeometryMath.signedHeadingDeltaDegrees(10.0, 350.0))
         assertEquals(0.0, GeometryMath.signedHeadingDeltaDegrees(720.0, 0.0))
+        assertEquals(-180.0, GeometryMath.signedHeadingDeltaDegrees(0.0, 180.0))
     }
 
     @Test
