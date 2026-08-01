@@ -30,6 +30,24 @@ class RouteNormalizerTest {
     }
 
     @Test
+    fun retainsEndpointWithoutDuplicateWhenRouteLengthEqualsSampleInterval() {
+        val start = GeoPoint(0.0, 0.0)
+        val end = GeoPoint(0.0, 0.0001)
+        val route = RouteGeometry(id = "exact-interval-stage", points = listOf(start, end))
+        val routeLengthMeters = GeometryMath.distanceMeters(start, end)
+
+        val result = RouteNormalizer.normalize(
+            route = route,
+            sampleIntervalMeters = routeLengthMeters,
+            maximumSegmentLengthMeters = 1_000.0,
+        )
+
+        assertTrue(result is RouteNormalizationResult.Accepted)
+        assertEquals(listOf(0.0, routeLengthMeters), result.route.samples.map { it.routeDistanceMeters })
+        assertEquals(listOf(start, end), result.route.samples.map { it.point })
+    }
+
+    @Test
     fun maintainsSamplingCadenceAcrossSegmentBoundary() {
         val route = RouteGeometry(
             id = "two-segment-stage",
