@@ -6,8 +6,8 @@
   "source": {
     "name": "Geofabrik Northern California OpenStreetMap extract",
     "url": "https://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
-    "downloadedAt": null,
-    "sha256": null
+    "downloadedAt": "2026-08-01T23:16:58Z",
+    "sha256": "8d2d7e596410659e5f7812556b5d1803f5fab3c6e9859d3dd89a3c563031ba9a"
   },
   "generator": {
     "name": null,
