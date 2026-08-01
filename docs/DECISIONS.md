@@ -74,3 +74,11 @@ Use this as an append-only decision record. Do not rewrite earlier decisions; su
 - **Decision:** The early real-map view may require `INTERNET` and use an app-owned/self-hosted tile endpoint rendered by MapLibre. The pacenote engine remains provider-neutral and continues to receive only app-owned geometry models.
 - **Why:** The product owner accepts an internet requirement for the first real-map iteration and can self-host tile data, avoiding a dependency on public OSM tile infrastructure while enabling genuine road context.
 - **Consequence:** Add a narrowly scoped `INTERNET` permission only with the MapLibre/tile integration. Before implementation, document the endpoint, authentication model, region/data source, tile format/style, OSM attribution/licensing, cache policy, privacy disclosure, and failure/offline behavior. Do not use `tile.openstreetmap.org` as a production default. This supersedes ADR-008 only for optional early-map display; GPX replay, route matching, and pacenote generation remain local and app-owned.
+
+## ADR-010 — Start real-map proof with a local Northern California package
+
+- **Date:** 2026-08-01
+- **Status:** Accepted
+- **Decision:** Prove the first real basemap using a locally imported Northern California vector-tile package, rendered by MapLibre without runtime network access. The self-hosted online-tile option remains deferred, not rejected.
+- **Why:** A single known region proves the real-map overlay while keeping Replay Alpha reliable, private, and independent of server setup.
+- **Consequence:** Generate and version map data off-device; require OSM/ODbL attribution and provenance; do not bundle the large generated package inside the APK. The package must be optional with an app-owned route-canvas fallback. This supersedes ADR-009 for the initial implementation sequence only.

@@ -23,3 +23,9 @@ Thumbs.db
 
 # Generated diagnostics
 *.log
+
+# Generated local map packages and source extracts (retain provenance manifests only)
+local-maps/
+*.mbtiles
+*.pmtiles
+*.osm.pbf

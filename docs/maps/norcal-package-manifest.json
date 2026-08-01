@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "packageId": "norcal-local-basemap",
+  "region": "Northern California, United States",
+  "format": "MBTiles vector tiles with local MapLibre style assets",
+  "source": {
+    "name": "Geofabrik Northern California OpenStreetMap extract",
+    "url": "https://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
+    "downloadedAt": null,
+    "sha256": null
+  },
+  "generator": {
+    "name": null,
+    "version": null,
+    "command": null
+  },
+  "output": {
+    "filename": null,
+    "sha256": null,
+    "sizeBytes": null
+  },
+  "attribution": "© OpenStreetMap contributors",
+  "license": "Open Database License (ODbL)"
+}
