@@ -66,3 +66,11 @@ Use this as an append-only decision record. Do not rewrite earlier decisions; su
 - **Why:** Mapbox credentials are unavailable, while the core product hypothesis—whether geometry-derived spoken curve previews are useful and conservative—can be tested without hosted routing or map tiles.
 - **Consequence:** V1 is a GPX route-following pacenote companion, not address-to-address navigation: it provides no destination search, routing, road-network map matching, ordinary maneuvers, or automatic rerouting. It must pause speech rather than invent guidance when matching is uncertain, ambiguous, wrong-way, or off-route. Self-hosted routing and MapLibre with licensed/bundled tiles remain separate future decisions.
 - **Supersedes:** ADR-001 only for the V1 navigation-runtime choice. ADR-002, ADR-003, ADR-004, ADR-006, and ADR-007 remain accepted.
+
+## ADR-009 — Self-hosted online tiles for early real-map testing
+
+- **Date:** 2026-08-01
+- **Status:** Accepted
+- **Decision:** The early real-map view may require `INTERNET` and use an app-owned/self-hosted tile endpoint rendered by MapLibre. The pacenote engine remains provider-neutral and continues to receive only app-owned geometry models.
+- **Why:** The product owner accepts an internet requirement for the first real-map iteration and can self-host tile data, avoiding a dependency on public OSM tile infrastructure while enabling genuine road context.
+- **Consequence:** Add a narrowly scoped `INTERNET` permission only with the MapLibre/tile integration. Before implementation, document the endpoint, authentication model, region/data source, tile format/style, OSM attribution/licensing, cache policy, privacy disclosure, and failure/offline behavior. Do not use `tile.openstreetmap.org` as a production default. This supersedes ADR-008 only for optional early-map display; GPX replay, route matching, and pacenote generation remain local and app-owned.
