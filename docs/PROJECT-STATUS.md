@@ -1,7 +1,7 @@
 # Project Status
 
 > **Last updated:** 2026-08-01
-> **Phase:** Open-stack MVP geometry foundation; `pacenotes` module and distance/heading primitives in progress.
+> **Phase:** Open-stack MVP geometry foundation; deterministic normalization primitives complete.
 > **Overall state:** No Mapbox credential is required for V1. The active scope is a local-GPX route-following pacenote companion, not general navigation.
 
 ## Completed
@@ -19,6 +19,7 @@
 - [x] Android/Gradle scaffold verified with the constrained local toolchain: `:app:assembleDebug` succeeds.
 - [x] First provider-neutral TDD slice: `GeoPoint` and immutable `RouteGeometry` invariants, including defensive input-list copying; Luna RED→GREEN evidence and Sol re-review passed.
 - [x] Provider-neutral route state slice: validated `RouteRevision` and `MatchedRoutePosition`; explicit navigation statuses/progress invariants; and deterministic, caller-independent pacenote event IDs. Focused RED→GREEN tests and full JVM/debug-APK verification passed.
+- [x] Pure `pacenotes` geometry foundation: stable spherical distance, initial heading, wrap-safe signed heading deltas, and typed metre-spaced route normalization with conservative discontinuity suppression. Focused tests and full relevant Gradle verification passed.
 
 ## Not started
 
@@ -34,9 +35,9 @@
 
 ## Immediate next action
 
-**P0-04: Add distance-indexed route normalization after the completed pure `pacenotes` distance/heading primitive slice.**
+**P0-05: Plan conservative curve detection/classification using the completed pure geometry foundation.**
 
-The source plan is [`docs/plans/2026-08-01-p0-04-geometry-normalization.md`](plans/2026-08-01-p0-04-geometry-normalization.md). Keep the remaining work inside that plan: metre spacing, endpoint preservation, and conservative discontinuity suppression—no curve classifier yet.
+Start from [`docs/plans/2026-08-01-p0-04-geometry-normalization.md`](plans/2026-08-01-p0-04-geometry-normalization.md). Create P0-05’s own exact test strategy and classifier-threshold documentation before production code; it must suppress uncertain/noisy geometry and never imply safe speed.
 
 Do not add Mapbox, public OSM tiles, OSRM demo endpoints, Google Play Services, `INTERNET` permission, credentials, or secret configuration to V1.
 
