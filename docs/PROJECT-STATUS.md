@@ -1,7 +1,7 @@
 # Project Status
 
 > **Last updated:** 2026-08-01
-> **Phase:** Open-stack MVP foundation; provider-neutral route/progress/pacenote domain boundary complete.
+> **Phase:** Open-stack MVP geometry foundation; `pacenotes` module and distance/heading primitives in progress.
 > **Overall state:** No Mapbox credential is required for V1. The active scope is a local-GPX route-following pacenote companion, not general navigation.
 
 ## Completed
@@ -34,9 +34,9 @@
 
 ## Immediate next action
 
-**P0-04: Implement deterministic geometry normalization and distance/heading primitives using the completed provider-neutral models.**
+**P0-04: Add distance-indexed route normalization after the completed pure `pacenotes` distance/heading primitive slice.**
 
-The current source plan is [`docs/plans/2026-08-01-p0-03-route-progress-pacenote-domain.md`](plans/2026-08-01-p0-03-route-progress-pacenote-domain.md); P0-04 needs its own test strategy and exact module/files before production code.
+The source plan is [`docs/plans/2026-08-01-p0-04-geometry-normalization.md`](plans/2026-08-01-p0-04-geometry-normalization.md). Keep the remaining work inside that plan: metre spacing, endpoint preservation, and conservative discontinuity suppression—no curve classifier yet.
 
 Do not add Mapbox, public OSM tiles, OSRM demo endpoints, Google Play Services, `INTERNET` permission, credentials, or secret configuration to V1.
 

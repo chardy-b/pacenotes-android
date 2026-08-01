@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 rootProject.name = "Rally Pacenotes"
 include(":app")
 include(":core-model")
+include(":pacenotes")

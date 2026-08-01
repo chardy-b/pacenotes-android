@@ -23,8 +23,9 @@ You are continuing **Rally Pacenotes Android**, a credential-free Android MVP th
 - Git repository: `main`, remote `https://github.com/chardy-b/pacenotes-android.git`; initial project commit exists.
 - Android scaffold is verified locally; `:app:assembleDebug` succeeds.
 - `core-model` is pure Kotlin/JVM and contains validated `GeoPoint`, immutable `RouteGeometry`, `RouteRevision`, `MatchedRoutePosition`, `NavigationProgress`/`NavigationStatus`, and deterministic `Pacenote` event IDs.
-- Last full local verification: `./gradlew --no-daemon :core-model:test test :app:assembleDebug` succeeded on 2026-08-01.
-- The next coding slice is P0-04, not GPX import, UI, GPS matching, or speech.
+- `pacenotes` is a new pure Kotlin/JVM module depending only on `core-model`; its first completed slice is spherical distance plus wrap-safe heading primitives.
+- Last full local verification before P0-04: `./gradlew --no-daemon :core-model:test test :app:assembleDebug` succeeded on 2026-08-01. Run the fresh `:pacenotes:test` check before any P0-04 commit.
+- The next coding slice is P0-04 route normalization, not GPX import, UI, GPS matching, or speech.
 
 ## Security rules
 
