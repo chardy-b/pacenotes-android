@@ -1,0 +1,121 @@
+name: Generate Northern California offline map package
+
+on:
+  workflow_dispatch:
+    inputs:
+      maxzoom:
+        description: "Maximum vector-tile zoom (start at 12 for the feasibility package)"
+        required: true
+        default: "12"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate Northern California MBTiles
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PBF_URL: https://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf
+      PLANETILER_VERSION: v0.10.2
+      PLANETILER_SHA256: https://github.com/onthegomap/planetiler/releases/download/v0.10.2/planetiler.jar.sha256
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Validate requested zoom
+        env:
+          MAX_ZOOM: ${{ inputs.maxzoom }}
+        run: |
+          case "$MAX_ZOOM" in
+            0|1|2|3|4|5|6|7|8|9|10|11|12|13|14) ;;
+            *) echo "maxzoom must be an integer from 0 through 14" >&2; exit 64 ;;
+          esac
+
+      - name: Download pinned Planetiler release
+        run: |
+          curl --fail --location --retry 3 --retry-delay 5 \
+            --output planetiler.jar \
+            "https://github.com/onthegomap/planetiler/releases/download/${PLANETILER_VERSION}/planetiler.jar"
+          curl --fail --location --retry 3 --retry-delay 5 \
+            --output planetiler.jar.sha256 \
+            "$PLANETILER_SHA256"
+          sha256sum --check planetiler.jar.sha256
+
+      - name: Download Northern California OSM extract
+        run: |
+          mkdir -p local-maps/package
+          curl --fail --location --retry 3 --retry-delay 10 \
+            --output local-maps/norcal-latest.osm.pbf \
+            "$PBF_URL"
+          sha256sum local-maps/norcal-latest.osm.pbf | tee local-maps/package/source.sha256
+
+      - name: Generate feasibility MBTiles package
+        env:
+          MAX_ZOOM: ${{ inputs.maxzoom }}
+        run: |
+          java -Xmx6g -jar planetiler.jar \
+            --osm-path=local-maps/norcal-latest.osm.pbf \
+            --output=local-maps/package/norcal.mbtiles \
+            --maxzoom="$MAX_ZOOM" \
+            --force
+          sha256sum local-maps/package/norcal.mbtiles | tee local-maps/package/norcal.mbtiles.sha256
+          stat --printf='sizeBytes=%s\n' local-maps/package/norcal.mbtiles | tee local-maps/package/norcal.mbtiles.size
+
+      - name: Write provenance manifest
+        env:
+          MAX_ZOOM: ${{ inputs.maxzoom }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          pbf = Path("local-maps/norcal-latest.osm.pbf")
+          mbtiles = Path("local-maps/package/norcal.mbtiles")
+          digest = lambda path: hashlib.file_digest(path.open("rb"), "sha256").hexdigest()
+          manifest = {
+              "schemaVersion": 1,
+              "packageId": "norcal-local-basemap",
+              "region": "Northern California, United States",
+              "format": "MBTiles vector tiles for MapLibre Native",
+              "source": {
+                  "name": "Geofabrik Northern California OpenStreetMap extract",
+                  "url": os.environ["PBF_URL"],
+                  "downloadedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                  "sha256": digest(pbf),
+                  "sizeBytes": pbf.stat().st_size,
+              },
+              "generator": {
+                  "name": "Planetiler",
+                  "version": os.environ["PLANETILER_VERSION"],
+                  "command": f"java -Xmx6g -jar planetiler.jar --osm-path=local-maps/norcal-latest.osm.pbf --output=local-maps/package/norcal.mbtiles --maxzoom={os.environ['MAX_ZOOM']} --force",
+              },
+              "output": {
+                  "filename": mbtiles.name,
+                  "sha256": digest(mbtiles),
+                  "sizeBytes": mbtiles.stat().st_size,
+                  "maxZoom": int(os.environ["MAX_ZOOM"]),
+              },
+              "attribution": "© OpenStreetMap contributors",
+              "license": "Open Database License (ODbL)",
+          }
+          Path("local-maps/package/manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          PY
+
+      - name: Upload inspectable package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: norcal-map-package-z${{ inputs.maxzoom }}
+          path: local-maps/package/
+          if-no-files-found: error
+          retention-days: 14
