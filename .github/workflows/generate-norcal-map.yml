@@ -62,6 +62,7 @@ jobs:
           MAX_ZOOM: ${{ inputs.maxzoom }}
         run: |
           java -Xmx6g -jar planetiler.jar \
+            --download \
             --osm-path=local-maps/norcal-latest.osm.pbf \
             --output=local-maps/package/norcal.mbtiles \
             --maxzoom="$MAX_ZOOM" \
