@@ -67,7 +67,7 @@ jobs:
             --output=local-maps/package/norcal.mbtiles \
             --maxzoom="$MAX_ZOOM" \
             --force
-          sha256sum local-maps/package/norcal.mbtiles | tee local-maps/package/norcal.mbtiles.sha256
+          (cd local-maps/package && sha256sum norcal.mbtiles > norcal.mbtiles.sha256)
           stat --printf='sizeBytes=%s\n' local-maps/package/norcal.mbtiles | tee local-maps/package/norcal.mbtiles.size
 
       - name: Write provenance manifest
