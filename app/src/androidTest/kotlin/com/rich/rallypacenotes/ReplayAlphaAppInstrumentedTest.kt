@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import java.io.File
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -15,19 +16,13 @@ class ReplayAlphaAppInstrumentedTest {
 
     @Test
     fun replayAlphaShowsLocalMapSurfaceWhenAnImportedPackageIsAvailable() {
-        val appFilesDir = composeTestRule.activity.filesDir
-        val importedMap = File(appFilesDir, "local-maps/norcal.mbtiles")
-        importedMap.parentFile!!.mkdirs()
-        importedMap.writeBytes(byteArrayOf())
+        val importedMap = File(composeTestRule.activity.filesDir, "local-maps/norcal.mbtiles")
+        assertTrue("Hosted emulator must provision the verified NorCal package", importedMap.isFile)
 
-        try {
-            composeTestRule.activityRule.scenario.recreate()
+        composeTestRule.activityRule.scenario.recreate()
 
-            composeTestRule.onNodeWithContentDescription("offline MapLibre map").assertIsDisplayed()
-            composeTestRule.onNodeWithText("© OpenStreetMap contributors · © OpenMapTiles").assertIsDisplayed()
-        } finally {
-            appFilesDir.deleteRecursively()
-        }
+        composeTestRule.onNodeWithContentDescription("offline MapLibre map").assertIsDisplayed()
+        composeTestRule.onNodeWithText("© OpenStreetMap contributors · © OpenMapTiles").assertIsDisplayed()
     }
 
     @Test
