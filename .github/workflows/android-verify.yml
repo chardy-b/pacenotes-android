@@ -31,6 +31,7 @@ permissions:
 jobs:
   verify:
     name: ${{ inputs.gradle_task || ':app:testDebugUnitTest' }}
+    if: ${{ inputs.run_instrumentation != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -46,7 +47,6 @@ jobs:
   instrumentation:
     name: connected Android instrumentation tests
     if: ${{ inputs.run_instrumentation == true }}
-    needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -103,6 +103,9 @@ jobs:
         with:
           name: android-instrumentation-reports
           path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            .ci/norcal-map/norcal.mbtiles
+            .ci/norcal-map/norcal.mbtiles.sha256
             app/build/reports/androidTests/
             instrumentation-output.txt
             offline-map.png
