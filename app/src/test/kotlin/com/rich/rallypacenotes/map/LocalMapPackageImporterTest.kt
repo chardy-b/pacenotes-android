@@ -3,6 +3,7 @@ package com.rich.rallypacenotes.map
 import java.io.ByteArrayInputStream
 import java.io.File
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 
@@ -15,8 +16,9 @@ class LocalMapPackageImporterTest {
         try {
             LocalMapPackageImporter.importInto(appFilesDir, ByteArrayInputStream(packageBytes))
 
-            val importedPackage = assertNotNull(LocalMapPackageLocator.find(appFilesDir))
-            assertArrayEquals(packageBytes, importedPackage.mbtilesFile.readBytes())
+            val importedPackage = LocalMapPackageLocator.find(appFilesDir)
+            assertNotNull(importedPackage)
+            assertArrayEquals(packageBytes, importedPackage!!.mbtilesFile.readBytes())
             assertEquals(
                 File(appFilesDir, "local-maps/norcal.mbtiles").absolutePath,
                 importedPackage.mbtilesFile.absolutePath,
