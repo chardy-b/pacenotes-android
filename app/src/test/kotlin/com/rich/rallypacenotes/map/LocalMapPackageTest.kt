@@ -36,8 +36,14 @@ class LocalMapPackageTest {
         try {
             val style = LocalMapStyle.forPackage(LocalMapPackage.from(mbtiles))
 
-            assertTrue(style.contains("\"url\":\"mbtiles://${mbtiles.absolutePath}\""))
-            assertTrue(style.contains("\"source-layer\":\"transportation\""))
+            assertTrue(
+                Regex("\\\"url\\\"\\s*:\\s*\\\"${Regex.escape("mbtiles://${mbtiles.absolutePath}")}\\\"")
+                    .containsMatchIn(style),
+            )
+            assertTrue(
+                Regex("\\\"source-layer\\\"\\s*:\\s*\\\"transportation\\\"")
+                    .containsMatchIn(style),
+            )
             assertFalse(style.contains("http://"))
             assertFalse(style.contains("https://"))
         } finally {
