@@ -3,10 +3,12 @@ package com.rich.rallypacenotes
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import org.maplibre.android.MapLibre
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { ReplayAlphaApp() }
+        MapLibre.getInstance(applicationContext)
+        setContent { ReplayAlphaApp(appFilesDir = filesDir) }
     }
 }

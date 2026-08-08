@@ -19,14 +19,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import java.io.File
+import com.rich.rallypacenotes.map.LocalMapPackageLocator
+import com.rich.rallypacenotes.map.OfflineMapView
 import com.rich.rallypacenotes.replay.ReplayAlphaFixture
 import com.rich.rallypacenotes.replay.ReplayController
 import com.rich.rallypacenotes.ui.RouteCanvas
 
 @Composable
-fun ReplayAlphaApp() {
+fun ReplayAlphaApp(appFilesDir: File? = null) {
     val controller = remember { ReplayController(ReplayAlphaFixture.route.samples.last().routeDistanceMeters) }
     var state by remember { mutableStateOf(controller.state) }
+    val localMapPackage = remember(appFilesDir) { appFilesDir?.let(LocalMapPackageLocator::find) }
     val candidateText = ReplayAlphaFixture.candidates.firstOrNull()?.let {
         "Detected candidate: ${it.direction.name.lowercase()} curve, severity ${it.severity}, ${it.startDistanceMeters.toInt()}-${it.endDistanceMeters.toInt()} m"
     } ?: "No geometry-only curve candidate detected"
@@ -45,7 +49,10 @@ fun ReplayAlphaApp() {
                     currentDistanceMeters = state.currentDistanceMeters,
                     candidates = ReplayAlphaFixture.candidates,
                 )
-                Text(
+                localMapPackage?.let { mapPackage ->
+                    OfflineMapView(mapPackage)
+                    Text("© OpenStreetMap contributors · © OpenMapTiles")
+                } ?: Text(
                     "Offline map unavailable — route canvas remains active",
                     modifier = Modifier.semantics { contentDescription = "offline map unavailable" },
                 )
