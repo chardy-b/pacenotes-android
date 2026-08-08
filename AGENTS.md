@@ -25,7 +25,35 @@
 - Do not claim speed, hazards, visibility, surface, crests, or jumps from route geometry.
 - Do not expose credentials or private data in source, logs, test fixtures, Linear, or chat.
 
+## WIP and priority control
+
+- Work on at most one P0 implementation issue at a time. The sole current active P0 is `WIL-10`.
+- Before switching from an active issue, post a Linear checkpoint that identifies completed acceptance criteria, remaining work, reason for the switch, and the new priority decision.
+- A feasibility spike does not authorize product delivery or adjacent work. If blocked or deferred, record the exact blocker/next action and return the issue to the appropriate non-active state.
+
+## Required slice contract
+
+Before any material code change, record in the active Linear issue:
+
+1. one outcome and explicit non-goals;
+2. one focused acceptance test, including the expected RED failure;
+3. the required evidence tier (unit, integration, device, visual, or release);
+4. a maximum of three logical commits for the slice.
+
+Implement exactly one acceptance item per slice: RED test, minimal implementation, focused verification, relevant suite, then a focused commit. Count only predeclared acceptance criteria with matching evidence as progress.
+
+## Stop and reassess
+
+Stop implementation and post a Linear checkpoint after either two failed repair attempts, three commits without closing the stated acceptance item, or any material scope/architecture change. The checkpoint must state completed evidence, unverified conditions, blockers/scope change, and a clear recommendation to continue, split, defer, or reprioritize.
+
+## Evidence rules
+
+- A unit test proves logic; an integration test proves a component boundary; a device test proves installed-device behavior; visual/release claims require visual/release evidence.
+- A Compose semantic assertion proves a UI node exists, and an application PID proves the process survived; neither proves rendered visual content.
+- Issue-specific done criteria must name the required evidence. For offline maps this includes validated atomic import, corrupt/interrupted-package handling, verified no-network tile rendering, visually inspected evidence, provenance, and explicit test-versus-production packaging behavior.
+- Keep CI infrastructure changes narrowly scoped to the product acceptance they unlock; do not mix CI refactoring with unrelated feature delivery.
+
 ## Current priority
 
-- `WIL-10` — finish P0-05 conservative curve detection/classification acceptance coverage.
-- `WIL-17` — prove the local offline Northern California MapLibre basemap without runtime network access.
+- `WIL-10` — sole active P0: finish conservative curve detection/classification acceptance coverage one fixture category at a time.
+- `WIL-17` — deferred feasibility follow-up; resume only with a new bounded slice contract and the required evidence tier.
