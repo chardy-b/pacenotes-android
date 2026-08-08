@@ -89,11 +89,14 @@ jobs:
             adb shell run-as com.rich.rallypacenotes mkdir -p files/local-maps &&
             adb shell run-as com.rich.rallypacenotes cp /data/local/tmp/norcal.mbtiles files/local-maps/norcal.mbtiles &&
             adb shell run-as com.rich.rallypacenotes ls -l files/local-maps/norcal.mbtiles &&
-            adb shell am instrument -w -r com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner | tee instrumentation-output.txt &&
+            instrumentation_exit=0 &&
+            adb shell am instrument -w -r com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > instrumentation-output.txt || instrumentation_exit=$? &&
+            cat instrumentation-output.txt &&
+            adb logcat -d -t 500 > device-logcat.txt &&
+            test "$instrumentation_exit" -eq 0 &&
             ! grep -q "FAILURES!!!" instrumentation-output.txt &&
             grep -q "OK (" instrumentation-output.txt &&
-            adb exec-out screencap -p > offline-map.png &&
-            adb logcat -d -t 500 > device-logcat.txt
+            adb exec-out screencap -p > offline-map.png
       - name: Upload instrumentation reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
