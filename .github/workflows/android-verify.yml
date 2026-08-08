@@ -25,6 +25,7 @@ on:
       - ".github/workflows/android-verify.yml"
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -55,6 +56,18 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
+      - name: Download and verify the NorCal offline map package
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .ci/norcal-map
+          curl --fail --location --silent --show-error \
+            --header "Authorization: Bearer $GITHUB_TOKEN" \
+            --header "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/9012191704/zip" \
+            --output .ci/norcal-map.zip
+          unzip -q .ci/norcal-map.zip -d .ci/norcal-map
+          (cd .ci/norcal-map && sha256sum -c norcal.mbtiles.sha256)
       - name: Enable KVM acceleration for the emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -72,9 +85,15 @@ jobs:
             adb devices -l &&
             adb install -r app/build/outputs/apk/debug/app-debug.apk &&
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk &&
+            adb push .ci/norcal-map/norcal.mbtiles /data/local/tmp/norcal.mbtiles &&
+            adb shell run-as com.rich.rallypacenotes mkdir -p files/local-maps &&
+            adb shell run-as com.rich.rallypacenotes cp /data/local/tmp/norcal.mbtiles files/local-maps/norcal.mbtiles &&
+            adb shell run-as com.rich.rallypacenotes ls -l files/local-maps/norcal.mbtiles &&
             adb shell am instrument -w -r com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner | tee instrumentation-output.txt &&
             ! grep -q "FAILURES!!!" instrumentation-output.txt &&
-            grep -q "OK (" instrumentation-output.txt
+            grep -q "OK (" instrumentation-output.txt &&
+            adb exec-out screencap -p > offline-map.png &&
+            adb logcat -d -t 500 > device-logcat.txt
       - name: Upload instrumentation reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -83,4 +102,6 @@ jobs:
           path: |
             app/build/reports/androidTests/
             instrumentation-output.txt
+            offline-map.png
+            device-logcat.txt
           if-no-files-found: warn
