@@ -9,6 +9,9 @@ class LocalMapPackage private constructor(
         get() = "mbtiles://${mbtilesFile.absolutePath}"
 
     companion object {
-        fun from(mbtilesFile: File): LocalMapPackage = LocalMapPackage(mbtilesFile)
+        fun from(mbtilesFile: File): LocalMapPackage {
+            require(mbtilesFile.isFile) { "Imported map package must be an existing file" }
+            return LocalMapPackage(mbtilesFile)
+        }
     }
 }
