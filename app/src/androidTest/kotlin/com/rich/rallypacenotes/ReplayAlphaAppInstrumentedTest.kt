@@ -15,12 +15,14 @@ class ReplayAlphaAppInstrumentedTest {
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun replayAlphaShowsLocalMapSurfaceWhenAnImportedPackageIsAvailable() {
+    fun replayAlphaProvisionsBundledMapPackageOnFirstLaunch() {
         val importedMap = File(composeTestRule.activity.filesDir, "local-maps/norcal.mbtiles")
-        assertTrue("Hosted emulator must provision the verified NorCal package", importedMap.isFile)
+        assertTrue("Hosted emulator must provide the verified NorCal package before the test removes it", importedMap.isFile)
+        assertTrue("Test must remove the previously provisioned package", importedMap.delete())
 
         composeTestRule.activityRule.scenario.recreate()
 
+        assertTrue("App must restore its bundled NorCal package into private storage", importedMap.isFile)
         composeTestRule.onNodeWithContentDescription("offline MapLibre map").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Import offline map package").assertIsDisplayed()
         composeTestRule.onNodeWithText("© OpenStreetMap contributors · © OpenMapTiles").assertIsDisplayed()
