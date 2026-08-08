@@ -22,6 +22,7 @@ class ReplayAlphaAppInstrumentedTest {
         composeTestRule.activityRule.scenario.recreate()
 
         composeTestRule.onNodeWithContentDescription("offline MapLibre map").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Import offline map package").assertIsDisplayed()
         composeTestRule.onNodeWithText("© OpenStreetMap contributors · © OpenMapTiles").assertIsDisplayed()
     }
 
