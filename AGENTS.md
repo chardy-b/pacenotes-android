@@ -36,11 +36,11 @@
 Before any material code change, record in the active Linear issue:
 
 1. one outcome and explicit non-goals;
-2. one focused acceptance test, including the expected RED failure;
+2. one focused test written before production code, including its expected failure reason;
 3. the required evidence tier (unit, integration, device, visual, or release);
 4. a maximum of three logical commits for the slice.
 
-Implement exactly one acceptance item per slice: RED test, minimal implementation, focused verification, relevant suite, then a focused commit. Count only predeclared acceptance criteria with matching evidence as progress.
+Implement exactly one acceptance item per slice: test first, minimal implementation, cheapest relevant GREEN verification, relevant suite at the slice checkpoint, then a focused commit. A witnessed RED run is required only for regressions, safety-critical/ambiguous behavior, tests that could accidentally pass, or uncertain device/integration behavior. Do not use an emulator merely to witness RED. Count only predeclared acceptance criteria with matching evidence as progress.
 
 ## Stop and reassess
 
