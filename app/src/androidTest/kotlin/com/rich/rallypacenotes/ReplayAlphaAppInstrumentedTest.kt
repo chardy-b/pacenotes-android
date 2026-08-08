@@ -31,7 +31,7 @@ class ReplayAlphaAppInstrumentedTest {
         composeTestRule.onNodeWithContentDescription("Pause replay").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Reset replay").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("geometry-only detected candidate").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("offline map unavailable").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("offline MapLibre map").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Start replay").performClick()
         composeTestRule.onNodeWithText("Status: running | Current distance: 20.0 m").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Pause replay").performClick()
