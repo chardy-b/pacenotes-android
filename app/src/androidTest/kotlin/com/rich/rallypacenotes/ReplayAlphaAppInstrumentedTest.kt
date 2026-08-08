@@ -5,12 +5,30 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import java.io.File
 import org.junit.Rule
 import org.junit.Test
 
 class ReplayAlphaAppInstrumentedTest {
     @get:Rule
     val composeTestRule = createAndroidComposeRule<MainActivity>()
+
+    @Test
+    fun replayAlphaShowsLocalMapSurfaceWhenAnImportedPackageIsAvailable() {
+        val appFilesDir = File(composeTestRule.activity.filesDir, "map-test")
+        val importedMap = File(appFilesDir, "local-maps/norcal.mbtiles")
+        importedMap.parentFile!!.mkdirs()
+        importedMap.writeBytes(byteArrayOf())
+
+        try {
+            composeTestRule.setContent { ReplayAlphaApp(appFilesDir = appFilesDir) }
+
+            composeTestRule.onNodeWithContentDescription("offline MapLibre map").assertIsDisplayed()
+            composeTestRule.onNodeWithText("© OpenStreetMap contributors · © OpenMapTiles").assertIsDisplayed()
+        } finally {
+            appFilesDir.deleteRecursively()
+        }
+    }
 
     @Test
     fun replayAlphaShowsStableControlsAndGeometryCandidate() {
