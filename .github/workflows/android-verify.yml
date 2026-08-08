@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: false
+      publish_phone_test_release:
+        description: Publish the verified debug APK as a GitHub prerelease asset
+        required: false
+        type: boolean
+        default: false
   push:
     branches:
       - teo/wil-17-p0-12-prove-offline-norcal-basemap
@@ -26,7 +31,7 @@ on:
 
 permissions:
   actions: read
-  contents: read
+  contents: write
 
 jobs:
   verify:
@@ -119,3 +124,27 @@ jobs:
             offline-map.png
             device-logcat.txt
           if-no-files-found: warn
+
+  release-phone-test:
+    name: publish verified phone-test APK
+    needs: instrumentation
+    if: ${{ inputs.publish_phone_test_release == true && needs.instrumentation.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-instrumentation-reports
+          path: release-artifact
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: phone-test-${{ github.run_number }}
+          name: Rally Pacenotes phone map-and-location test ${{ github.run_number }}
+          prerelease: true
+          generate_release_notes: false
+          body: |
+            Verified phone-test build: first launch provisions the offline NorCal map, then the app requests location permission and shows the MapLibre current-location marker.
+
+            Verification run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          files: release-artifact/app/build/outputs/apk/debug/app-debug.apk
