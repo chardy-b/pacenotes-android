@@ -45,6 +45,10 @@ fun ReplayAlphaApp() {
                     currentDistanceMeters = state.currentDistanceMeters,
                     candidates = ReplayAlphaFixture.candidates,
                 )
+                Text(
+                    "Offline map unavailable — route canvas remains active",
+                    modifier = Modifier.semantics { contentDescription = "offline map unavailable" },
+                )
                 Text("Status: ${state.status.name.lowercase()} | Current distance: ${"%.1f".format(state.currentDistanceMeters)} m", modifier = Modifier.semantics { contentDescription = "replay status and current distance" })
                 Text(candidateText, modifier = Modifier.semantics { contentDescription = "geometry-only detected candidate" })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 16.dp)) {
