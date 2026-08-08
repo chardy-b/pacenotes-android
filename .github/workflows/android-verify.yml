@@ -68,6 +68,10 @@ jobs:
             --output .ci/norcal-map.zip
           unzip -q .ci/norcal-map.zip -d .ci/norcal-map
           (cd .ci/norcal-map && sha256sum -c norcal.mbtiles.sha256)
+      - name: Bundle verified map package into the phone-test APK
+        run: |
+          mkdir -p app/src/debug/assets
+          cp .ci/norcal-map/norcal.mbtiles app/src/debug/assets/norcal.mbtiles
       - name: Enable KVM acceleration for the emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -85,10 +89,6 @@ jobs:
             adb devices -l &&
             adb install -r app/build/outputs/apk/debug/app-debug.apk &&
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk &&
-            adb push .ci/norcal-map/norcal.mbtiles /data/local/tmp/norcal.mbtiles &&
-            adb shell run-as com.rich.rallypacenotes mkdir -p files/local-maps &&
-            adb shell run-as com.rich.rallypacenotes cp /data/local/tmp/norcal.mbtiles files/local-maps/norcal.mbtiles &&
-            adb shell run-as com.rich.rallypacenotes ls -l files/local-maps/norcal.mbtiles &&
             instrumentation_exit=0 &&
             adb shell am instrument -w -r com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > instrumentation-output.txt || instrumentation_exit=$? &&
             cat instrumentation-output.txt &&

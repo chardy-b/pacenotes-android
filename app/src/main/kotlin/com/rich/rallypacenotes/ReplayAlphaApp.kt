@@ -27,10 +27,14 @@ import com.rich.rallypacenotes.replay.ReplayController
 import com.rich.rallypacenotes.ui.RouteCanvas
 
 @Composable
-fun ReplayAlphaApp(appFilesDir: File? = null) {
+fun ReplayAlphaApp(
+    appFilesDir: File? = null,
+    mapPackageVersion: Int = 0,
+    onImportMapPackage: () -> Unit = {},
+) {
     val controller = remember { ReplayController(ReplayAlphaFixture.route.samples.last().routeDistanceMeters) }
     var state by remember { mutableStateOf(controller.state) }
-    val localMapPackage = remember(appFilesDir) { appFilesDir?.let(LocalMapPackageLocator::find) }
+    val localMapPackage = remember(appFilesDir, mapPackageVersion) { appFilesDir?.let(LocalMapPackageLocator::find) }
     val candidateText = ReplayAlphaFixture.candidates.firstOrNull()?.let {
         "Detected candidate: ${it.direction.name.lowercase()} curve, severity ${it.severity}, ${it.startDistanceMeters.toInt()}-${it.endDistanceMeters.toInt()} m"
     } ?: "No geometry-only curve candidate detected"
@@ -56,6 +60,10 @@ fun ReplayAlphaApp(appFilesDir: File? = null) {
                     "Offline map unavailable — route canvas remains active",
                     modifier = Modifier.semantics { contentDescription = "offline map unavailable" },
                 )
+                Button(
+                    onClick = onImportMapPackage,
+                    modifier = Modifier.semantics { contentDescription = "Import offline map package" },
+                ) { Text("Import offline map") }
                 Text("Status: ${state.status.name.lowercase()} | Current distance: ${"%.1f".format(state.currentDistanceMeters)} m", modifier = Modifier.semantics { contentDescription = "replay status and current distance" })
                 Text(candidateText, modifier = Modifier.semantics { contentDescription = "geometry-only detected candidate" })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 16.dp)) {
