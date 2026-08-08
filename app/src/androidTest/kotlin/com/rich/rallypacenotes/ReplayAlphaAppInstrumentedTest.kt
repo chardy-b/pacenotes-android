@@ -15,13 +15,13 @@ class ReplayAlphaAppInstrumentedTest {
 
     @Test
     fun replayAlphaShowsLocalMapSurfaceWhenAnImportedPackageIsAvailable() {
-        val appFilesDir = File(composeTestRule.activity.filesDir, "map-test")
+        val appFilesDir = composeTestRule.activity.filesDir
         val importedMap = File(appFilesDir, "local-maps/norcal.mbtiles")
         importedMap.parentFile!!.mkdirs()
         importedMap.writeBytes(byteArrayOf())
 
         try {
-            composeTestRule.setContent { ReplayAlphaApp(appFilesDir = appFilesDir) }
+            composeTestRule.activityRule.scenario.recreate()
 
             composeTestRule.onNodeWithContentDescription("offline MapLibre map").assertIsDisplayed()
             composeTestRule.onNodeWithText("© OpenStreetMap contributors · © OpenMapTiles").assertIsDisplayed()
