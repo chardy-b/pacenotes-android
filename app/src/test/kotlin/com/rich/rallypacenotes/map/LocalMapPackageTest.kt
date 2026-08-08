@@ -2,7 +2,9 @@ package com.rich.rallypacenotes.map
 
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LocalMapPackageTest {
@@ -25,6 +27,21 @@ class LocalMapPackageTest {
 
         assertThrows(IllegalArgumentException::class.java) {
             LocalMapPackage.from(missing)
+        }
+    }
+
+    @Test
+    fun styleUsesTheLocalMbtilesUriWithoutAnyRemoteUrl() {
+        val mbtiles = File.createTempFile("norcal", ".mbtiles")
+        try {
+            val style = LocalMapStyle.forPackage(LocalMapPackage.from(mbtiles))
+
+            assertTrue(style.contains("\"url\":\"mbtiles://${mbtiles.absolutePath}\""))
+            assertTrue(style.contains("\"source-layer\":\"transportation\""))
+            assertFalse(style.contains("http://"))
+            assertFalse(style.contains("https://"))
+        } finally {
+            mbtiles.delete()
         }
     }
 }
