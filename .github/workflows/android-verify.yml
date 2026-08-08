@@ -89,6 +89,9 @@ jobs:
             adb devices -l &&
             adb install -r app/build/outputs/apk/debug/app-debug.apk &&
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk &&
+            adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_FINE_LOCATION &&
+            adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_COARSE_LOCATION &&
+            adb emu geo fix -122.4194 37.7749 &&
             instrumentation_exit=0 &&
             adb shell am instrument -w -r com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > instrumentation-output.txt || instrumentation_exit=$? &&
             cat instrumentation-output.txt &&

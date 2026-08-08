@@ -30,6 +30,8 @@ import com.rich.rallypacenotes.ui.RouteCanvas
 fun ReplayAlphaApp(
     appFilesDir: File? = null,
     mapPackageVersion: Int = 0,
+    locationPermissionGranted: Boolean = false,
+    onRequestLocationPermission: () -> Unit = {},
     onImportMapPackage: () -> Unit = {},
 ) {
     val controller = remember { ReplayController(ReplayAlphaFixture.route.samples.last().routeDistanceMeters) }
@@ -54,12 +56,23 @@ fun ReplayAlphaApp(
                     candidates = ReplayAlphaFixture.candidates,
                 )
                 localMapPackage?.let { mapPackage ->
-                    OfflineMapView(mapPackage)
+                    OfflineMapView(mapPackage, locationPermissionGranted)
                     Text("© OpenStreetMap contributors · © OpenMapTiles")
                 } ?: Text(
                     "Offline map unavailable — route canvas remains active",
                     modifier = Modifier.semantics { contentDescription = "offline map unavailable" },
                 )
+                if (locationPermissionGranted) {
+                    Text(
+                        "Current location is shown on the map",
+                        modifier = Modifier.semantics { contentDescription = "current location marker" },
+                    )
+                } else {
+                    Button(
+                        onClick = onRequestLocationPermission,
+                        modifier = Modifier.semantics { contentDescription = "Enable current location" },
+                    ) { Text("Enable current location") }
+                }
                 Button(
                     onClick = onImportMapPackage,
                     modifier = Modifier.semantics { contentDescription = "Import offline map package" },
