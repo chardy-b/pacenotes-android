@@ -34,6 +34,7 @@ fun HostedMapView(
     AndroidView(
         factory = { context ->
             MapView(context).also { view ->
+                view.onCreate(null)
                 mapView = view
                 view.getMapAsync { map ->
                     map.setStyle(Style.Builder().fromUri(HostedMapStyle.LIBERTY_STYLE_URI)) { style ->
@@ -68,7 +69,9 @@ fun HostedMapView(
 
     DisposableEffect(mapView) {
         mapView?.onStart()
+        mapView?.onResume()
         onDispose {
+            mapView?.onPause()
             mapView?.onStop()
             mapView?.onDestroy()
         }
