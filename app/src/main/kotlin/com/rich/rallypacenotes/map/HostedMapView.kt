@@ -5,11 +5,9 @@ import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.viewinterop.AndroidView
@@ -31,49 +29,51 @@ private const val LOG_TAG = "HostedMapView"
 fun HostedMapView(
     locationPermissionGranted: Boolean,
 ) {
-    var mapView by remember { mutableStateOf<MapView?>(null) }
-
-    AndroidView(
-        factory = { context ->
-            MapView(context).also { view ->
-                mapView = view
-                view.getMapAsync { map ->
-                    map.setStyle(Style.Builder().fromUri(HostedMapStyle.LIBERTY_STYLE_URI)) { style ->
-                        Log.i(LOG_TAG, "OpenFreeMap Liberty style loaded")
-                        map.moveCamera(CameraUpdateFactory.newLatLngZoom(NORCAL_CENTER, NORCAL_DEFAULT_ZOOM))
-                        if (locationPermissionGranted) {
-                            val locationComponent = map.locationComponent
-                            val locationOptions = LocationComponentOptions.builder(context)
-                                .pulseEnabled(true)
-                                .build()
-                            val activationOptions = LocationComponentActivationOptions.builder(context, style)
-                                .locationComponentOptions(locationOptions)
-                                .useDefaultLocationEngine(true)
-                                .locationEngineRequest(
-                                    LocationEngineRequest.Builder(1_000)
-                                        .setFastestInterval(1_000)
-                                        .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
-                                        .build(),
-                                )
-                                .build()
-                            locationComponent.activateLocationComponent(activationOptions)
-                            locationComponent.isLocationComponentEnabled = true
-                            locationComponent.cameraMode = CameraMode.TRACKING
-                        }
+    val context = LocalContext.current
+    val mapView = remember(locationPermissionGranted) {
+        MapView(context).also { view ->
+            view.onCreate(null)
+            view.getMapAsync { map ->
+                map.setStyle(Style.Builder().fromUri(HostedMapStyle.LIBERTY_STYLE_URI)) { style ->
+                    Log.i(LOG_TAG, "OpenFreeMap Liberty style loaded")
+                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(NORCAL_CENTER, NORCAL_DEFAULT_ZOOM))
+                    if (locationPermissionGranted) {
+                        val locationOptions = LocationComponentOptions.builder(context)
+                            .pulseEnabled(true)
+                            .build()
+                        val activationOptions = LocationComponentActivationOptions.builder(context, style)
+                            .locationComponentOptions(locationOptions)
+                            .useDefaultLocationEngine(true)
+                            .locationEngineRequest(
+                                LocationEngineRequest.Builder(1_000)
+                                    .setFastestInterval(1_000)
+                                    .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
+                                    .build(),
+                            )
+                            .build()
+                        map.locationComponent.activateLocationComponent(activationOptions)
+                        map.locationComponent.isLocationComponentEnabled = true
+                        map.locationComponent.cameraMode = CameraMode.TRACKING
                     }
                 }
             }
-        },
+        }
+    }
+
+    AndroidView(
+        factory = { mapView },
         modifier = Modifier
             .fillMaxSize()
             .semantics { contentDescription = "hosted MapLibre map" },
     )
 
     DisposableEffect(mapView) {
-        mapView?.onStart()
+        mapView.onStart()
+        mapView.onResume()
         onDispose {
-            mapView?.onStop()
-            mapView?.onDestroy()
+            mapView.onPause()
+            mapView.onStop()
+            mapView.onDestroy()
         }
     }
 }

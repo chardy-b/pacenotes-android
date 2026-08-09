@@ -89,6 +89,8 @@ jobs:
             sleep 20 &&
             adb shell pidof com.rich.rallypacenotes &&
             adb exec-out screencap -p > hosted-map.png &&
+            app_pid=$(adb shell pidof com.rich.rallypacenotes) &&
+            adb logcat -d -v threadtime --pid="$app_pid" > app-logcat.txt &&
             adb logcat -d -t 500 > device-logcat.txt
       - name: Upload instrumentation reports
         if: ${{ always() }}
@@ -100,6 +102,7 @@ jobs:
             app/build/reports/androidTests/
             instrumentation-output.txt
             hosted-map.png
+            app-logcat.txt
             device-logcat.txt
           if-no-files-found: warn
 
