@@ -34,10 +34,11 @@ fun ReplayAlphaApp(
                 ) {
                     if (locationPermissionGranted) {
                         Text(
-                            text = "Current location active",
+                            text = "Location permission granted",
+                            color = Color.White,
                             modifier = Modifier
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
-                                .semantics { contentDescription = "current location marker" },
+                                .semantics { contentDescription = "location permission granted" },
                         )
                     } else {
                         Button(

@@ -29,7 +29,7 @@ class ReplayAlphaAppInstrumentedTest {
     @Test
     fun mapFirstScreenShowsOnlyHostedMapAndEssentialControls() {
         composeTestRule.onNodeWithContentDescription("hosted MapLibre map").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("current location marker").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("location permission granted").assertIsDisplayed()
         composeTestRule.onNodeWithText("© OpenStreetMap contributors · © OpenMapTiles").assertIsDisplayed()
 
         composeTestRule.onNodeWithContentDescription("Start replay").assertDoesNotExist()
