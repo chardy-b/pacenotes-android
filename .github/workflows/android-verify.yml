@@ -81,13 +81,7 @@ jobs:
             adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_FINE_LOCATION &&
             adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_COARSE_LOCATION &&
             adb emu geo fix -122.4194 37.7749 &&
-            instrumentation_exit=0 &&
-            adb shell am instrument -w -r com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > instrumentation-output.txt || instrumentation_exit=$? &&
-            cat instrumentation-output.txt &&
-            adb logcat -d -t 500 > device-logcat.txt &&
-            test "$instrumentation_exit" -eq 0 &&
-            ! grep -q "FAILURES!!!" instrumentation-output.txt &&
-            grep -q "OK (" instrumentation-output.txt &&
+            { instrumentation_exit=0; adb shell am instrument -w -r com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > instrumentation-output.txt || instrumentation_exit=$?; cat instrumentation-output.txt; adb logcat -d -t 500 > device-logcat.txt; test "$instrumentation_exit" -eq 0; ! grep -q "FAILURES!!!" instrumentation-output.txt; grep -q "OK (" instrumentation-output.txt; } &&
             adb shell am force-stop com.rich.rallypacenotes &&
             adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
             adb emu geo fix -122.4194 37.7749 &&
