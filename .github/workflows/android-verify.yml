@@ -3,17 +3,13 @@ name: Android verification
 on:
   workflow_dispatch:
     inputs:
-      gradle_task:
-        description: Gradle task to run
-        required: false
-        default: ":app:testDebugUnitTest"
       run_instrumentation:
-        description: Run connected Android instrumentation tests in a GitHub-hosted emulator
+        description: Run the emulator gate for a user-reviewable milestone or an Android device-specific change
         required: false
         type: boolean
         default: false
       publish_phone_test_release:
-        description: Publish the verified debug APK as a GitHub prerelease asset
+        description: Publish the candidate debug APK only after the captured emulator screenshot has been reviewed
         required: false
         type: boolean
         default: false
@@ -33,9 +29,14 @@ permissions:
   actions: read
   contents: write
 
+# Keep only the newest verification for a ref; a later push supersedes an in-flight run.
+concurrency:
+  group: android-verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
-    name: ${{ inputs.gradle_task || ':app:testDebugUnitTest' }}
+    name: JVM and app unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -45,8 +46,8 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
-      - name: Run Android Gradle verification
-        run: ./gradlew --no-daemon --stacktrace ${{ inputs.gradle_task || ':app:testDebugUnitTest' }}
+      - name: Run all fast unit-test suites
+        run: ./gradlew --no-daemon --stacktrace :app:testDebugUnitTest :core-model:test :pacenotes:test
 
   instrumentation:
     name: connected Android instrumentation tests
@@ -109,9 +110,23 @@ jobs:
             app-logcat.txt
             device-logcat.txt
           if-no-files-found: warn
+      - name: Record required screenshot-review checklist
+        if: ${{ always() }}
+        run: |
+          {
+            echo "## Required user-review evidence"
+            echo
+            echo "Before accepting this emulator run or publishing its APK, inspect \`hosted-map.png\` from \`android-instrumentation-reports\`."
+            echo
+            echo "- [ ] The app—not Android system UI—is visible."
+            echo "- [ ] Northern California basemap features have rendered; the map is not a blank style surface."
+            echo "- [ ] Attribution is visible."
+            echo "- [ ] The current-location marker is visible at the injected coordinate."
+            echo "- [ ] Review \`app-logcat.txt\` and \`location-state.txt\` for the same run."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   release-phone-test:
-    name: publish verified phone-test APK
+    name: publish review-required phone-test APK
     needs: instrumentation
     if: ${{ inputs.publish_phone_test_release == true && needs.instrumentation.result == 'success' }}
     runs-on: ubuntu-latest
@@ -129,7 +144,7 @@ jobs:
           prerelease: true
           generate_release_notes: false
           body: |
-            Verified phone-test build: the app loads the hosted OpenFreeMap Liberty basemap and shows the MapLibre current-location marker after runtime permission.
+            Review-required phone-test build. Before treating this APK as accepted or sharing it with a tester, inspect `hosted-map.png`, `app-logcat.txt`, and `location-state.txt` in the `android-instrumentation-reports` artifact from this exact run.
 
             Verification run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           files: release-artifact/app/build/outputs/apk/debug/app-debug.apk
