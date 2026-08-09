@@ -11,14 +11,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.location.LocationComponentActivationOptions
 import org.maplibre.android.location.LocationComponentOptions
 import org.maplibre.android.location.engine.LocationEngineRequest
 import org.maplibre.android.location.modes.CameraMode
-import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 
@@ -27,8 +26,7 @@ private const val NORCAL_DEFAULT_ZOOM = 7.0
 
 @SuppressLint("MissingPermission")
 @Composable
-fun OfflineMapView(
-    localMapPackage: LocalMapPackage,
+fun HostedMapView(
     locationPermissionGranted: Boolean,
 ) {
     var mapView by remember { mutableStateOf<MapView?>(null) }
@@ -38,8 +36,7 @@ fun OfflineMapView(
             MapView(context).also { view ->
                 mapView = view
                 view.getMapAsync { map ->
-                    map.setStyle(Style.Builder().fromJson(LocalMapStyle.forPackage(localMapPackage))) { style ->
-                        // Start inside the bundled NorCal package even before the location engine delivers its first fix.
+                    map.setStyle(Style.Builder().fromUri(HostedMapStyle.LIBERTY_STYLE_URI)) { style ->
                         map.moveCamera(CameraUpdateFactory.newLatLngZoom(NORCAL_CENTER, NORCAL_DEFAULT_ZOOM))
                         if (locationPermissionGranted) {
                             val locationComponent = map.locationComponent
@@ -66,7 +63,7 @@ fun OfflineMapView(
         },
         modifier = Modifier
             .fillMaxSize()
-            .semantics { contentDescription = "offline MapLibre map" },
+            .semantics { contentDescription = "hosted MapLibre map" },
     )
 
     DisposableEffect(mapView) {

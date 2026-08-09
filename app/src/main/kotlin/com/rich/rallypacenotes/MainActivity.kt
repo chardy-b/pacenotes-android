@@ -6,17 +6,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
-import com.rich.rallypacenotes.map.BundledMapPackageProvisioner
-import com.rich.rallypacenotes.map.LocalMapPackageImporter
 import org.maplibre.android.MapLibre
 
 class MainActivity : ComponentActivity() {
-    private var mapPackageVersion by mutableIntStateOf(0)
     private var locationPermissionGranted by mutableStateOf(false)
 
     private val requestLocationPermission = registerForActivityResult(
@@ -26,26 +21,14 @@ class MainActivity : ComponentActivity() {
             permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
     }
 
-    private val selectMapPackage = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri ?: return@registerForActivityResult
-        contentResolver.openInputStream(uri)?.let { source ->
-            runCatching { LocalMapPackageImporter.importInto(filesDir, source) }
-                .onSuccess { mapPackageVersion++ }
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         MapLibre.getInstance(applicationContext)
-        BundledMapPackageProvisioner.provisionInto(this)
         locationPermissionGranted = hasLocationPermission()
         setContent {
             ReplayAlphaApp(
-                appFilesDir = filesDir,
-                mapPackageVersion = mapPackageVersion,
                 locationPermissionGranted = locationPermissionGranted,
                 onRequestLocationPermission = { requestLocationPermission.launch(LOCATION_PERMISSIONS) },
-                onImportMapPackage = { selectMapPackage.launch(arrayOf("application/octet-stream", "*/*")) },
             )
         }
     }

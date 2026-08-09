@@ -14,24 +14,22 @@ class ReplayAlphaAppInstrumentedTest {
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun replayAlphaProvisionsBundledMapPackageOnFirstLaunch() {
+    fun hostedMapDoesNotRequireLocalMapPackage() {
         val importedMap = File(composeTestRule.activity.filesDir, "local-maps/norcal.mbtiles")
-        assertTrue("Hosted emulator must provide the verified NorCal package before the test removes it", importedMap.isFile)
-        assertTrue("Test must remove the previously provisioned package", importedMap.delete())
+        importedMap.delete()
 
         composeTestRule.activityRule.scenario.recreate()
 
-        assertTrue("App must restore its bundled NorCal package into private storage", importedMap.isFile)
-        composeTestRule.onNodeWithContentDescription("offline MapLibre map").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Import offline map package").assertIsDisplayed()
+        assertTrue("Hosted map MVP must not provision a local MBTiles package", !importedMap.exists())
+        composeTestRule.onNodeWithContentDescription("hosted MapLibre map").assertIsDisplayed()
         composeTestRule.onNodeWithText("© OpenStreetMap contributors · © OpenMapTiles").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Import offline map package").assertDoesNotExist()
     }
 
     @Test
-    fun mapFirstScreenShowsOnlyTheOfflineMapAndEssentialControls() {
-        composeTestRule.onNodeWithContentDescription("offline MapLibre map").assertIsDisplayed()
+    fun mapFirstScreenShowsOnlyHostedMapAndEssentialControls() {
+        composeTestRule.onNodeWithContentDescription("hosted MapLibre map").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("current location marker").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Import offline map package").assertIsDisplayed()
         composeTestRule.onNodeWithText("© OpenStreetMap contributors · © OpenMapTiles").assertIsDisplayed()
 
         composeTestRule.onNodeWithContentDescription("Start replay").assertDoesNotExist()

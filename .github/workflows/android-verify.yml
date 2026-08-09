@@ -19,7 +19,7 @@ on:
         default: false
   push:
     branches:
-      - teo/wil-17-p0-12-prove-offline-norcal-basemap
+      - teo/wil-70-p0-13-hosted-openfreemap-mvp
     paths:
       - "app/**"
       - "core-model/**"
@@ -61,27 +61,6 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
-      - name: Download and verify the NorCal offline map package
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p .ci/norcal-map
-          artifact_url=$(curl --fail --silent --show-error \
-            --header "Authorization: Bearer $GITHUB_TOKEN" \
-            --header "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts?name=norcal-map-package-z12&per_page=100" \
-            | python3 -c 'import json, sys; artifacts = [a for a in json.load(sys.stdin)["artifacts"] if not a["expired"]]; assert artifacts, "No non-expired NorCal z12 artifact found"; print(artifacts[0]["archive_download_url"])')
-          curl --fail --location --silent --show-error \
-            --header "Authorization: Bearer $GITHUB_TOKEN" \
-            --header "Accept: application/vnd.github+json" \
-            "$artifact_url" \
-            --output .ci/norcal-map.zip
-          unzip -q .ci/norcal-map.zip -d .ci/norcal-map
-          (cd .ci/norcal-map && sha256sum -c norcal.mbtiles.sha256)
-      - name: Bundle verified map package into the phone-test APK
-        run: |
-          mkdir -p app/src/debug/assets
-          cp .ci/norcal-map/norcal.mbtiles app/src/debug/assets/norcal.mbtiles
       - name: Enable KVM acceleration for the emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -114,7 +93,7 @@ jobs:
             adb emu geo fix -122.4194 37.7749 &&
             sleep 8 &&
             adb shell pidof com.rich.rallypacenotes &&
-            adb exec-out screencap -p > offline-map.png &&
+            adb exec-out screencap -p > hosted-map.png &&
             adb logcat -d -t 500 > device-logcat.txt
       - name: Upload instrumentation reports
         if: ${{ always() }}
@@ -123,11 +102,9 @@ jobs:
           name: android-instrumentation-reports
           path: |
             app/build/outputs/apk/debug/app-debug.apk
-            .ci/norcal-map/norcal.mbtiles
-            .ci/norcal-map/norcal.mbtiles.sha256
             app/build/reports/androidTests/
             instrumentation-output.txt
-            offline-map.png
+            hosted-map.png
             device-logcat.txt
           if-no-files-found: warn
 
@@ -150,7 +127,7 @@ jobs:
           prerelease: true
           generate_release_notes: false
           body: |
-            Verified phone-test build: first launch provisions the offline NorCal map, then the app requests location permission and shows the MapLibre current-location marker.
+            Verified phone-test build: the app loads the hosted OpenFreeMap Liberty basemap and shows the MapLibre current-location marker after runtime permission.
 
             Verification run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           files: release-artifact/app/build/outputs/apk/debug/app-debug.apk
