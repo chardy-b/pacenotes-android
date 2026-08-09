@@ -15,6 +15,7 @@ import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.location.LocationComponentActivationOptions
 import org.maplibre.android.location.LocationComponentOptions
+import org.maplibre.android.location.engine.LocationEngineDefault
 import org.maplibre.android.location.engine.LocationEngineRequest
 import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.maps.MapView
@@ -48,7 +49,8 @@ fun HostedMapView(
                             .build()
                         val activationOptions = LocationComponentActivationOptions.builder(context, style)
                             .locationComponentOptions(locationOptions)
-                            .useDefaultLocationEngine(true)
+                            .locationEngine(LocationEngineDefault.getDefaultLocationEngine(context))
+                            .useDefaultLocationEngine(false)
                             .locationEngineRequest(
                                 LocationEngineRequest.Builder(1_000)
                                     .setFastestInterval(1_000)
