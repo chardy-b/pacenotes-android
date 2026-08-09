@@ -106,7 +106,9 @@ jobs:
             grep -q "OK (" instrumentation-output.txt &&
             adb shell am force-stop com.rich.rallypacenotes &&
             adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
-            sleep 5 &&
+            # Deliver a fresh fix after MapLibre has activated its location engine, then allow camera tracking and tiles to settle.
+            adb emu geo fix -122.4194 37.7749 &&
+            sleep 8 &&
             adb shell pidof com.rich.rallypacenotes &&
             adb exec-out screencap -p > offline-map.png &&
             adb logcat -d -t 500 > device-logcat.txt

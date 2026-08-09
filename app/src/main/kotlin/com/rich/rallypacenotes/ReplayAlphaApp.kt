@@ -1,8 +1,8 @@
 package com.rich.rallypacenotes
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -10,21 +10,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import java.io.File
 import com.rich.rallypacenotes.map.LocalMapPackageLocator
 import com.rich.rallypacenotes.map.OfflineMapView
-import com.rich.rallypacenotes.replay.ReplayAlphaFixture
-import com.rich.rallypacenotes.replay.ReplayController
-import com.rich.rallypacenotes.ui.RouteCanvas
+import java.io.File
 
 @Composable
 fun ReplayAlphaApp(
@@ -34,64 +28,94 @@ fun ReplayAlphaApp(
     onRequestLocationPermission: () -> Unit = {},
     onImportMapPackage: () -> Unit = {},
 ) {
-    val controller = remember { ReplayController(ReplayAlphaFixture.route.samples.last().routeDistanceMeters) }
-    var state by remember { mutableStateOf(controller.state) }
-    val localMapPackage = remember(appFilesDir, mapPackageVersion) { appFilesDir?.let(LocalMapPackageLocator::find) }
-    val candidateText = ReplayAlphaFixture.candidates.firstOrNull()?.let {
-        "Detected candidate: ${it.direction.name.lowercase()} curve, severity ${it.severity}, ${it.startDistanceMeters.toInt()}-${it.endDistanceMeters.toInt()} m"
-    } ?: "No geometry-only curve candidate detected"
+    val localMapPackage = remember(appFilesDir, mapPackageVersion) {
+        appFilesDir?.let(LocalMapPackageLocator::find)
+    }
 
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(24.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text("Replay Alpha — Not for Driving", style = MaterialTheme.typography.headlineSmall)
-                Text("Route fixture: ${ReplayAlphaFixture.name}", modifier = Modifier.semantics { contentDescription = "route fixture name" })
-                RouteCanvas(
-                    route = ReplayAlphaFixture.route,
-                    currentDistanceMeters = state.currentDistanceMeters,
-                    candidates = ReplayAlphaFixture.candidates,
+            if (localMapPackage == null) {
+                MissingMapPackage(onImportMapPackage)
+            } else {
+                FullScreenOfflineMap(
+                    localMapPackage = localMapPackage,
+                    locationPermissionGranted = locationPermissionGranted,
+                    onRequestLocationPermission = onRequestLocationPermission,
+                    onImportMapPackage = onImportMapPackage,
                 )
-                localMapPackage?.let { mapPackage ->
-                    OfflineMapView(mapPackage, locationPermissionGranted)
-                    Text("© OpenStreetMap contributors · © OpenMapTiles")
-                } ?: Text(
-                    "Offline map unavailable — route canvas remains active",
-                    modifier = Modifier.semantics { contentDescription = "offline map unavailable" },
-                )
-                if (locationPermissionGranted) {
-                    Text(
-                        "Current location is shown on the map",
-                        modifier = Modifier.semantics { contentDescription = "current location marker" },
-                    )
-                } else {
-                    Button(
-                        onClick = onRequestLocationPermission,
-                        modifier = Modifier.semantics { contentDescription = "Enable current location" },
-                    ) { Text("Enable current location") }
-                }
-                Button(
-                    onClick = onImportMapPackage,
-                    modifier = Modifier.semantics { contentDescription = "Import offline map package" },
-                ) { Text("Import offline map") }
-                Text("Status: ${state.status.name.lowercase()} | Current distance: ${"%.1f".format(state.currentDistanceMeters)} m", modifier = Modifier.semantics { contentDescription = "replay status and current distance" })
-                Text(candidateText, modifier = Modifier.semantics { contentDescription = "geometry-only detected candidate" })
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 16.dp)) {
-                    Button(
-                        onClick = {
-                            controller.start()
-                            controller.advanceBy(20.0)
-                            state = controller.state
-                        },
-                        modifier = Modifier.semantics { contentDescription = "Start replay" },
-                    ) { Text("Start") }
-                    Button(onClick = { controller.pause(); state = controller.state }, modifier = Modifier.semantics { contentDescription = "Pause replay" }) { Text("Pause") }
-                    Button(onClick = { controller.reset(); state = controller.state }, modifier = Modifier.semantics { contentDescription = "Reset replay" }) { Text("Reset") }
-                }
             }
         }
+    }
+}
+
+@Composable
+private fun FullScreenOfflineMap(
+    localMapPackage: com.rich.rallypacenotes.map.LocalMapPackage,
+    locationPermissionGranted: Boolean,
+    onRequestLocationPermission: () -> Unit,
+    onImportMapPackage: () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        OfflineMapView(
+            localMapPackage = localMapPackage,
+            locationPermissionGranted = locationPermissionGranted,
+        )
+
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(16.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+        ) {
+            if (locationPermissionGranted) {
+                Text(
+                    text = "Current location active",
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .semantics { contentDescription = "current location marker" },
+                )
+            } else {
+                Button(
+                    onClick = onRequestLocationPermission,
+                    modifier = Modifier.semantics { contentDescription = "Enable current location" },
+                ) { Text("Enable current location") }
+            }
+        }
+
+        Button(
+            onClick = onImportMapPackage,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .semantics { contentDescription = "Import offline map package" },
+        ) { Text("Import map") }
+
+        Text(
+            text = "© OpenStreetMap contributors · © OpenMapTiles",
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp)
+                .semantics { contentDescription = "map attribution" },
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
+}
+
+@Composable
+private fun MissingMapPackage(onImportMapPackage: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text("Offline map unavailable")
+        Text("Import a local Northern California map package to view the basemap.")
+        Button(
+            onClick = onImportMapPackage,
+            modifier = Modifier.semantics { contentDescription = "Import offline map package" },
+        ) { Text("Import offline map") }
     }
 }

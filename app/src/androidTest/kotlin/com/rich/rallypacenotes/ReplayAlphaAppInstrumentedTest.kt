@@ -1,10 +1,10 @@
 package com.rich.rallypacenotes
 
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -29,18 +29,16 @@ class ReplayAlphaAppInstrumentedTest {
     }
 
     @Test
-    fun replayAlphaShowsStableControlsAndGeometryCandidate() {
-        composeTestRule.onNodeWithContentDescription("Start replay").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Pause replay").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Reset replay").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("geometry-only detected candidate").assertIsDisplayed()
+    fun mapFirstScreenShowsOnlyTheOfflineMapAndEssentialControls() {
         composeTestRule.onNodeWithContentDescription("offline MapLibre map").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("current location marker").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Start replay").performClick()
-        composeTestRule.onNodeWithText("Status: running | Current distance: 20.0 m").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Pause replay").performClick()
-        composeTestRule.onNodeWithText("Status: paused | Current distance: 20.0 m").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Reset replay").performClick()
-        composeTestRule.onNodeWithText("Status: stopped | Current distance: 0.0 m").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Import offline map package").assertIsDisplayed()
+        composeTestRule.onNodeWithText("© OpenStreetMap contributors · © OpenMapTiles").assertIsDisplayed()
+
+        composeTestRule.onNodeWithContentDescription("Start replay").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Pause replay").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Reset replay").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("geometry-only detected candidate").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("route fixture name").assertDoesNotExist()
     }
 }
