@@ -73,6 +73,7 @@ jobs:
           arch: x86_64
           profile: pixel_7_pro
           emulator-boot-timeout: 900
+          cores: 4
           script: >-
             ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleDebugAndroidTest &&
             adb devices -l &&
@@ -85,7 +86,7 @@ jobs:
             adb shell am force-stop com.rich.rallypacenotes &&
             adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
             adb emu geo fix -122.4194 37.7749 &&
-            sleep 8 &&
+            sleep 20 &&
             adb shell pidof com.rich.rallypacenotes &&
             adb exec-out screencap -p > hosted-map.png &&
             adb logcat -d -t 500 > device-logcat.txt

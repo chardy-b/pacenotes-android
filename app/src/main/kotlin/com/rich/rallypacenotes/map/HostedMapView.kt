@@ -1,6 +1,7 @@
 package com.rich.rallypacenotes.map
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -23,6 +24,7 @@ import org.maplibre.android.maps.Style
 
 private val NORCAL_CENTER = LatLng(39.10964, -121.01905)
 private const val NORCAL_DEFAULT_ZOOM = 7.0
+private const val LOG_TAG = "HostedMapView"
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -34,10 +36,10 @@ fun HostedMapView(
     AndroidView(
         factory = { context ->
             MapView(context).also { view ->
-                view.onCreate(null)
                 mapView = view
                 view.getMapAsync { map ->
                     map.setStyle(Style.Builder().fromUri(HostedMapStyle.LIBERTY_STYLE_URI)) { style ->
+                        Log.i(LOG_TAG, "OpenFreeMap Liberty style loaded")
                         map.moveCamera(CameraUpdateFactory.newLatLngZoom(NORCAL_CENTER, NORCAL_DEFAULT_ZOOM))
                         if (locationPermissionGranted) {
                             val locationComponent = map.locationComponent
@@ -69,9 +71,7 @@ fun HostedMapView(
 
     DisposableEffect(mapView) {
         mapView?.onStart()
-        mapView?.onResume()
         onDispose {
-            mapView?.onPause()
             mapView?.onStop()
             mapView?.onDestroy()
         }
