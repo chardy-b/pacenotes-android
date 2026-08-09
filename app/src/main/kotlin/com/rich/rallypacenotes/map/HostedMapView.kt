@@ -8,9 +8,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.location.LocationComponentActivationOptions
@@ -30,6 +33,7 @@ fun HostedMapView(
     locationPermissionGranted: Boolean,
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val mapView = remember(locationPermissionGranted) {
         MapView(context).also { view ->
             view.onCreate(null)
@@ -72,13 +76,31 @@ fun HostedMapView(
             .semantics { contentDescription = "hosted MapLibre map" },
     )
 
-    DisposableEffect(mapView) {
-        mapView.onStart()
-        mapView.onResume()
+    DisposableEffect(mapView, lifecycleOwner) {
+        var destroyed = false
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> mapView.onStart()
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_STOP -> mapView.onStop()
+                Lifecycle.Event.ON_DESTROY -> {
+                    if (!destroyed) {
+                        destroyed = true
+                        mapView.onDestroy()
+                    }
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
         onDispose {
-            mapView.onPause()
-            mapView.onStop()
-            mapView.onDestroy()
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            if (!destroyed) {
+                destroyed = true
+                mapView.onDestroy()
+            }
         }
     }
 }
