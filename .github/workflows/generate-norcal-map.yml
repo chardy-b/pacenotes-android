@@ -67,6 +67,56 @@ jobs:
             --output=local-maps/package/norcal.mbtiles \
             --maxzoom="$MAX_ZOOM" \
             --force
+          python3 - <<'PY'
+          import sqlite3
+          from pathlib import Path
+
+          mbtiles = Path("local-maps/package/norcal.mbtiles")
+          connection = sqlite3.connect(mbtiles)
+          try:
+              integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+              if integrity != "ok":
+                  raise SystemExit(f"Planetiler output failed integrity check: {integrity}")
+              tiles_object_type = connection.execute(
+                  "SELECT type FROM sqlite_master WHERE name = 'tiles'"
+              ).fetchone()
+              if tiles_object_type != ("view",):
+                  raise SystemExit(f"Expected Planetiler normalized tiles view, got {tiles_object_type}")
+
+              # MapLibre Native's direct MBTiles source does not reliably handle Planetiler's
+              # tiles_shallow/tiles_data normalized variant. Materialize the standard flat
+              # MBTiles schema: a physical tiles table with Z/X/Y/tile_data columns.
+              connection.executescript("""
+                  BEGIN;
+                  CREATE TABLE tiles_flat (
+                      zoom_level INTEGER NOT NULL,
+                      tile_column INTEGER NOT NULL,
+                      tile_row INTEGER NOT NULL,
+                      tile_data BLOB NOT NULL
+                  );
+                  INSERT INTO tiles_flat (zoom_level, tile_column, tile_row, tile_data)
+                      SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles;
+                  DROP VIEW tiles;
+                  DROP TABLE tiles_shallow;
+                  DROP TABLE tiles_data;
+                  ALTER TABLE tiles_flat RENAME TO tiles;
+                  CREATE UNIQUE INDEX tile_index
+                      ON tiles (zoom_level, tile_column, tile_row);
+                  COMMIT;
+                  VACUUM;
+              """)
+              if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                  raise SystemExit("Flattened MBTiles failed integrity check")
+              if connection.execute(
+                  "SELECT type FROM sqlite_master WHERE name = 'tiles'"
+              ).fetchone() != ("table",):
+                  raise SystemExit("Expected a physical standard tiles table after flattening")
+              required_columns = {row[1] for row in connection.execute("PRAGMA table_info(tiles)")}
+              if required_columns != {"zoom_level", "tile_column", "tile_row", "tile_data"}:
+                  raise SystemExit(f"Unexpected flat tiles columns: {required_columns}")
+          finally:
+              connection.close()
+          PY
           (cd local-maps/package && sha256sum norcal.mbtiles > norcal.mbtiles.sha256)
           stat --printf='sizeBytes=%s\n' local-maps/package/norcal.mbtiles | tee local-maps/package/norcal.mbtiles.size
 
