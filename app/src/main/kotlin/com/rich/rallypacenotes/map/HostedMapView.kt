@@ -33,6 +33,11 @@ fun HostedMapView(
     val mapView = remember(locationPermissionGranted) {
         MapView(context).also { view ->
             view.onCreate(null)
+            view.addOnDidFinishRenderingMapListener { fullyRendered ->
+                if (fullyRendered) {
+                    Log.i(LOG_TAG, "Hosted map render completed")
+                }
+            }
             view.getMapAsync { map ->
                 map.setStyle(Style.Builder().fromUri(HostedMapStyle.LIBERTY_STYLE_URI)) { style ->
                     Log.i(LOG_TAG, "OpenFreeMap Liberty style loaded")

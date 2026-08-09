@@ -86,8 +86,8 @@ jobs:
             adb shell am force-stop com.rich.rallypacenotes &&
             adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
             adb emu geo fix -122.4194 37.7749 &&
-            ready=0 && for attempt in $(seq 1 60); do if adb logcat -d -v brief HostedMapView:I '*:S' | grep -q 'OpenFreeMap Liberty style loaded'; then ready=1; break; fi; sleep 1; done &&
-            if [ "$ready" -ne 1 ]; then echo 'Timed out waiting for hosted MapLibre style readiness' >&2; adb logcat -d -v threadtime > device-logcat.txt; exit 1; fi &&
+            ready=0 && for attempt in $(seq 1 60); do if adb logcat -d -v brief HostedMapView:I '*:S' | grep -q 'Hosted map render completed'; then ready=1; break; fi; sleep 1; done &&
+            if [ "$ready" -ne 1 ]; then echo 'Timed out waiting for hosted MapLibre render readiness' >&2; adb logcat -d -v threadtime > device-logcat.txt; exit 1; fi &&
             sleep 3 &&
             adb shell pidof com.rich.rallypacenotes &&
             adb exec-out screencap -p > hosted-map.png &&
