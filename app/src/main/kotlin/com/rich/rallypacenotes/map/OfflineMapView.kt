@@ -18,7 +18,7 @@ import org.maplibre.android.location.LocationComponentActivationOptions
 import org.maplibre.android.location.LocationComponentOptions
 import org.maplibre.android.location.engine.LocationEngineRequest
 import org.maplibre.android.location.modes.CameraMode
-import org.maplibre.android.maps.CameraUpdateFactory
+import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 
