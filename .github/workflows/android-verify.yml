@@ -85,10 +85,11 @@ jobs:
             { instrumentation_exit=0; adb shell am instrument -w -r com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > instrumentation-output.txt || instrumentation_exit=$?; cat instrumentation-output.txt; adb logcat -d -t 500 > device-logcat.txt; test "$instrumentation_exit" -eq 0; ! grep -q "FAILURES!!!" instrumentation-output.txt; grep -q "OK (" instrumentation-output.txt; } &&
             adb shell am force-stop com.rich.rallypacenotes &&
             adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
-            adb emu geo fix -122.4194 37.7749 &&
             ready=0 && for attempt in $(seq 1 60); do if adb logcat -d -v brief HostedMapView:I '*:S' | grep -q 'Hosted map render completed'; then ready=1; break; fi; sleep 1; done &&
             if [ "$ready" -ne 1 ]; then echo 'Timed out waiting for hosted MapLibre render readiness' >&2; adb logcat -d -v threadtime > device-logcat.txt; exit 1; fi &&
+            adb emu geo fix -122.4194 37.7749 &&
             sleep 3 &&
+            adb shell dumpsys location > location-state.txt &&
             adb shell pidof com.rich.rallypacenotes &&
             adb exec-out screencap -p > hosted-map.png &&
             app_pid=$(adb shell pidof com.rich.rallypacenotes) &&
@@ -104,6 +105,7 @@ jobs:
             app/build/reports/androidTests/
             instrumentation-output.txt
             hosted-map.png
+            location-state.txt
             app-logcat.txt
             device-logcat.txt
           if-no-files-found: warn
