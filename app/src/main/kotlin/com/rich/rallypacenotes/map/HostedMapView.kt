@@ -52,7 +52,28 @@ fun HostedMapView(
                             .build()
                         val activationOptions = LocationComponentActivationOptions.builder(context, style)
                             .locationComponentOptions(locationOptions)
-                            .locationEngine(PlatformGpsLocationEngine(context))
+                            .locationEngine(
+                                PlatformGpsLocationEngine(context) { delivered ->
+                                    val component = map.locationComponent
+                                    Log.i(
+                                        LOG_TAG,
+                                        "MAPLIBRE_AFTER_CALLBACK input=${delivered.latitude},${delivered.longitude} " +
+                                            "componentLast=${component.lastKnownLocation?.latitude}," +
+                                            "${component.lastKnownLocation?.longitude} " +
+                                            "enabled=${component.isLocationComponentEnabled} " +
+                                            "cameraMode=${component.cameraMode} " +
+                                            "camera=${map.cameraPosition.target.latitude}," +
+                                            "${map.cameraPosition.target.longitude}",
+                                    )
+                                    view.post {
+                                        Log.i(
+                                            LOG_TAG,
+                                            "MAPLIBRE_AFTER_FRAME componentLast=${component.lastKnownLocation} " +
+                                                "camera=${map.cameraPosition.target} mode=${component.cameraMode}",
+                                        )
+                                    }
+                                },
+                            )
                             .useDefaultLocationEngine(false)
                             .locationEngineRequest(
                                 LocationEngineRequest.Builder(1_000)

@@ -8,11 +8,14 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Looper
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import org.maplibre.android.location.engine.LocationEngine
 import org.maplibre.android.location.engine.LocationEngineCallback
 import org.maplibre.android.location.engine.LocationEngineRequest
 import org.maplibre.android.location.engine.LocationEngineResult
+
+private const val LOG_TAG = "PlatformGpsEngine"
 
 /**
  * Location engine for MapLibre that consumes the platform GNSS provider directly.
@@ -21,7 +24,10 @@ import org.maplibre.android.location.engine.LocationEngineResult
  * framework's criteria-based selection choosing a fused/passive provider that does
  * not receive emulator GNSS fixes or produce a MapLibre puck.
  */
-class PlatformGpsLocationEngine(context: Context) : LocationEngine {
+class PlatformGpsLocationEngine(
+    context: Context,
+    private val onLocationDispatched: (Location) -> Unit = {},
+) : LocationEngine {
     private val locationManager = context.getSystemService(LocationManager::class.java)
     private val listeners = mutableMapOf<LocationEngineCallback<LocationEngineResult>, LocationListener>()
 
@@ -45,7 +51,20 @@ class PlatformGpsLocationEngine(context: Context) : LocationEngine {
     ) {
         removeLocationUpdates(callback)
         val listener = LocationListener { location ->
-            callback.onSuccess(LocationEngineResult.create(location))
+            Log.i(
+                LOG_TAG,
+                "GPS_LISTENER before callback provider=${location.provider} " +
+                    "lat=${location.latitude} lon=${location.longitude} " +
+                    "main=${Looper.myLooper() == Looper.getMainLooper()} " +
+                    "callback=${System.identityHashCode(callback)}",
+            )
+            try {
+                callback.onSuccess(LocationEngineResult.create(location))
+            } catch (exception: Exception) {
+                Log.e(LOG_TAG, "GPS_LISTENER callback failed", exception)
+                throw exception
+            }
+            onLocationDispatched(location)
         }
         listeners[callback] = listener
         locationManager.requestLocationUpdates(
