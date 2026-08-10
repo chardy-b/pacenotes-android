@@ -62,8 +62,8 @@ fun HostedMapView(
                                             "${component.lastKnownLocation?.longitude} " +
                                             "enabled=${component.isLocationComponentEnabled} " +
                                             "cameraMode=${component.cameraMode} " +
-                                            "camera=${map.cameraPosition.target.latitude}," +
-                                            "${map.cameraPosition.target.longitude}",
+                                            "camera=${map.cameraPosition.target?.latitude}," +
+                                            "${map.cameraPosition.target?.longitude}",
                                     )
                                     view.post {
                                         Log.i(
