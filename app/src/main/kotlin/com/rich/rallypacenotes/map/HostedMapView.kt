@@ -56,36 +56,7 @@ fun HostedMapView(
                         val activationOptions = LocationComponentActivationOptions.builder(context, style)
                             .locationComponentOptions(locationOptions)
                             .useSpecializedLocationLayer(true)
-                            .locationEngine(
-                                PlatformGpsLocationEngine(context) { delivered ->
-                                    val component = map.locationComponent
-                                    val locationLayerState = listOf(
-                                        "mapbox-location-foreground-layer",
-                                        "mapbox-location-background-layer",
-                                        "mapbox-location-accuracy-layer",
-                                        "mapbox-location-pulsing-circle-layer",
-                                    ).joinToString { layerId ->
-                                        "$layerId=${map.style?.getLayer(layerId)?.visibility}"
-                                    }
-                                    Log.i(
-                                        LOG_TAG,
-                                        "MAPLIBRE_AFTER_CALLBACK input=${delivered.latitude},${delivered.longitude} " +
-                                            "componentLast=${component.lastKnownLocation?.latitude}," +
-                                            "${component.lastKnownLocation?.longitude} " +
-                                            "enabled=${component.isLocationComponentEnabled} " +
-                                            "cameraMode=${component.cameraMode} " +
-                                            "camera=${map.cameraPosition.target?.latitude}," +
-                                            "${map.cameraPosition.target?.longitude} layers=$locationLayerState",
-                                    )
-                                    view.post {
-                                        Log.i(
-                                            LOG_TAG,
-                                            "MAPLIBRE_AFTER_FRAME componentLast=${component.lastKnownLocation} " +
-                                                "camera=${map.cameraPosition.target} mode=${component.cameraMode}",
-                                        )
-                                    }
-                                },
-                            )
+                            .locationEngine(PlatformGpsLocationEngine(context))
                             .useDefaultLocationEngine(false)
                             .locationEngineRequest(
                                 LocationEngineRequest.Builder(1_000)
