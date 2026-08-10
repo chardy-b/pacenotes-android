@@ -55,6 +55,7 @@ fun HostedMapView(
                             .build()
                         val activationOptions = LocationComponentActivationOptions.builder(context, style)
                             .locationComponentOptions(locationOptions)
+                            .useSpecializedLocationLayer(true)
                             .locationEngine(
                                 PlatformGpsLocationEngine(context) { delivered ->
                                     val component = map.locationComponent
