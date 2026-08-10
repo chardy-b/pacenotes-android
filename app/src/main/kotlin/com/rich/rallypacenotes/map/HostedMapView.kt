@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.rich.rallypacenotes.R
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.location.LocationComponentActivationOptions
@@ -48,6 +49,8 @@ fun HostedMapView(
                     map.moveCamera(CameraUpdateFactory.newLatLngZoom(NORCAL_CENTER, NORCAL_DEFAULT_ZOOM))
                     if (locationPermissionGranted) {
                         val locationOptions = LocationComponentOptions.builder(context)
+                            .foregroundDrawable(R.drawable.location_puck_foreground)
+                            .backgroundDrawable(R.drawable.location_puck_accuracy)
                             .pulseEnabled(true)
                             .build()
                         val activationOptions = LocationComponentActivationOptions.builder(context, style)
