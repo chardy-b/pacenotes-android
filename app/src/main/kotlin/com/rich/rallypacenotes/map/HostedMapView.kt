@@ -58,6 +58,14 @@ fun HostedMapView(
                             .locationEngine(
                                 PlatformGpsLocationEngine(context) { delivered ->
                                     val component = map.locationComponent
+                                    val locationLayerState = listOf(
+                                        "mapbox-location-foreground-layer",
+                                        "mapbox-location-background-layer",
+                                        "mapbox-location-accuracy-layer",
+                                        "mapbox-location-pulsing-circle-layer",
+                                    ).joinToString { layerId ->
+                                        "$layerId=${map.style?.getLayer(layerId)?.visibility}"
+                                    }
                                     Log.i(
                                         LOG_TAG,
                                         "MAPLIBRE_AFTER_CALLBACK input=${delivered.latitude},${delivered.longitude} " +
@@ -66,7 +74,7 @@ fun HostedMapView(
                                             "enabled=${component.isLocationComponentEnabled} " +
                                             "cameraMode=${component.cameraMode} " +
                                             "camera=${map.cameraPosition.target?.latitude}," +
-                                            "${map.cameraPosition.target?.longitude}",
+                                            "${map.cameraPosition.target?.longitude} layers=$locationLayerState",
                                     )
                                     view.post {
                                         Log.i(
