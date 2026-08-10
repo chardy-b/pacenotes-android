@@ -52,7 +52,8 @@ fun HostedMapView(
                             .build()
                         val activationOptions = LocationComponentActivationOptions.builder(context, style)
                             .locationComponentOptions(locationOptions)
-                            .useDefaultLocationEngine(true)
+                            .locationEngine(PlatformGpsLocationEngine(context))
+                            .useDefaultLocationEngine(false)
                             .locationEngineRequest(
                                 LocationEngineRequest.Builder(1_000)
                                     .setFastestInterval(1_000)

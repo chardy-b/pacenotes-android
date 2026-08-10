@@ -83,19 +83,16 @@ jobs:
             adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_FINE_LOCATION &&
             adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_COARSE_LOCATION &&
             { instrumentation_exit=0; adb shell am instrument -w -r com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > instrumentation-output.txt || instrumentation_exit=$?; cat instrumentation-output.txt; adb logcat -d -t 500 > device-logcat.txt; test "$instrumentation_exit" -eq 0; ! grep -q "FAILURES!!!" instrumentation-output.txt; grep -q "OK (" instrumentation-output.txt; } &&
-            adb shell appops set 2000 android:mock_location allow &&
-            adb shell cmd location providers add-test-provider fused --accuracy 1 --powerRequirement 3 &&
-            adb shell cmd location providers set-test-provider-enabled fused true &&
             adb shell am force-stop com.rich.rallypacenotes &&
             adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
             ready=0 && for attempt in $(seq 1 60); do if adb logcat -d -v brief HostedMapView:I '*:S' | grep -q 'Hosted map render completed'; then ready=1; break; fi; sleep 1; done &&
             if [ "$ready" -ne 1 ]; then echo 'Timed out waiting for hosted MapLibre render readiness' >&2; adb logcat -d -v threadtime > device-logcat.txt; exit 1; fi &&
-            adb shell cmd location providers set-test-provider-location fused --location 37.7749,-122.4194 --accuracy 5 &&
+            adb emu geo fix -122.4194 37.7749 &&
             sleep 2 &&
-            adb shell cmd location providers set-test-provider-location fused --location 37.7749,-122.4194 --accuracy 5 &&
+            adb emu geo fix -122.4194 37.7749 &&
             sleep 3 &&
             adb shell dumpsys location > location-state.txt &&
-            grep -q 'last location=Location\[fused' location-state.txt &&
+            grep -q 'Location\[gps 37.774900,-122.419400' location-state.txt &&
             adb shell pidof com.rich.rallypacenotes &&
             adb exec-out screencap -p > hosted-map.png &&
             app_pid=$(adb shell pidof com.rich.rallypacenotes) &&
