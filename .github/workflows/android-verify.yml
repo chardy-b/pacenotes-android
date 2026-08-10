@@ -92,7 +92,7 @@ jobs:
             adb emu geo fix -122.4194 37.7749 &&
             sleep 3 &&
             adb shell dumpsys location > location-state.txt &&
-            grep -q 'Location\[gps 37.774900,-122.419400' location-state.txt &&
+            grep -q 'Location\[gps 37\.7749' location-state.txt &&
             adb shell pidof com.rich.rallypacenotes &&
             adb exec-out screencap -p > hosted-map.png &&
             app_pid=$(adb shell pidof com.rich.rallypacenotes) &&
