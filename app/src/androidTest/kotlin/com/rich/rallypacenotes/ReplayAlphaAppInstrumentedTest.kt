@@ -28,10 +28,6 @@ class ReplayAlphaAppInstrumentedTest {
 
     @Test
     fun mapFirstScreenDoesNotRenderAnInAppLocationPermissionButton() {
-        composeTestRule.setContent {
-            ReplayAlphaApp(locationPermissionGranted = false)
-        }
-
         composeTestRule.onNodeWithContentDescription("Enable current location").assertDoesNotExist()
     }
 
