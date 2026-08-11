@@ -3,7 +3,6 @@ package com.rich.rallypacenotes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,7 +18,6 @@ import com.rich.rallypacenotes.map.HostedMapView
 @Composable
 fun ReplayAlphaApp(
     locationPermissionGranted: Boolean = false,
-    onRequestLocationPermission: () -> Unit = {},
 ) {
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -39,11 +37,6 @@ fun ReplayAlphaApp(
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                                 .semantics { contentDescription = "location permission granted" },
                         )
-                    } else {
-                        Button(
-                            onClick = onRequestLocationPermission,
-                            modifier = Modifier.semantics { contentDescription = "Enable current location" },
-                        ) { Text("Enable current location") }
                     }
                 }
 

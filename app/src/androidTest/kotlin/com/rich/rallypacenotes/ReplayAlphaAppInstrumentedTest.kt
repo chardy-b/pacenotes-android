@@ -27,6 +27,15 @@ class ReplayAlphaAppInstrumentedTest {
     }
 
     @Test
+    fun mapFirstScreenDoesNotRenderAnInAppLocationPermissionButton() {
+        composeTestRule.setContent {
+            ReplayAlphaApp(locationPermissionGranted = false)
+        }
+
+        composeTestRule.onNodeWithContentDescription("Enable current location").assertDoesNotExist()
+    }
+
+    @Test
     fun mapFirstScreenShowsOnlyHostedMapAndEssentialControls() {
         composeTestRule.onNodeWithContentDescription("hosted MapLibre map").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("location permission granted").assertIsDisplayed()

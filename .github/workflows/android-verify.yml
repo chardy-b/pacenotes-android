@@ -80,6 +80,13 @@ jobs:
             adb devices -l &&
             adb install -r app/build/outputs/apk/debug/app-debug.apk &&
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk &&
+            adb shell pm revoke com.rich.rallypacenotes android.permission.ACCESS_FINE_LOCATION || true &&
+            adb shell pm revoke com.rich.rallypacenotes android.permission.ACCESS_COARSE_LOCATION || true &&
+            adb shell am force-stop com.rich.rallypacenotes &&
+            adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
+            permission_dialog=0 && for attempt in $(seq 1 20); do adb shell uiautomator dump /sdcard/permission-window.xml >/dev/null && adb exec-out cat /sdcard/permission-window.xml > permission-window.xml && if grep -q 'While using the app' permission-window.xml; then permission_dialog=1; break; fi; sleep 1; done &&
+            test "$permission_dialog" -eq 1 &&
+            adb exec-out screencap -p > permission-request.png &&
             adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_FINE_LOCATION &&
             adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_COARSE_LOCATION &&
             { instrumentation_exit=0; adb shell am instrument -w -r com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > instrumentation-output.txt || instrumentation_exit=$?; cat instrumentation-output.txt; adb logcat -d -t 500 > device-logcat.txt; test "$instrumentation_exit" -eq 0; ! grep -q "FAILURES!!!" instrumentation-output.txt; grep -q "OK (" instrumentation-output.txt; } &&
@@ -107,6 +114,8 @@ jobs:
             app/build/outputs/apk/debug/app-debug.apk
             app/build/reports/androidTests/
             instrumentation-output.txt
+            permission-request.png
+            permission-window.xml
             hosted-map.png
             location-state.txt
             app-logcat.txt
@@ -120,6 +129,7 @@ jobs:
             echo
             echo "Before accepting this emulator run or publishing its APK, inspect \`hosted-map.png\` from \`android-instrumentation-reports\`."
             echo
+            echo "- [ ] \`permission-request.png\` shows Android's initial location-permission dialog, not an in-app permission button."
             echo "- [ ] The app—not Android system UI—is visible."
             echo "- [ ] Northern California basemap features have rendered; the map is not a blank style surface."
             echo "- [ ] Attribution is visible."

@@ -29,8 +29,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             ReplayAlphaApp(
                 locationPermissionGranted = locationPermissionGranted,
-                onRequestLocationPermission = { requestLocationPermission.launch(LOCATION_PERMISSIONS) },
             )
+        }
+        if (!locationPermissionGranted) {
+            requestLocationPermission.launch(LOCATION_PERMISSIONS)
         }
     }
 
