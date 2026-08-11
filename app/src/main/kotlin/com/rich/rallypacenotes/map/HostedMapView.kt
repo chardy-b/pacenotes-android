@@ -9,9 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -48,6 +50,10 @@ fun HostedMapView(
     val lifecycleOwner = LocalLifecycleOwner.current
     var lastLocation by remember { mutableStateOf<Location?>(null) }
     var deviceHeading by remember { mutableStateOf<DeviceHeadingSample?>(null) }
+    var foregroundStarted by remember(lifecycleOwner) {
+        mutableStateOf(lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
+    }
+    var freshnessTick by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     val lastReliableCourse = remember { LastReliableCourse() }
     val smoother = remember { CircularHeadingSmoother() }
 
@@ -92,7 +98,15 @@ fun HostedMapView(
         }
     }
 
-    val direction = remember(lastLocation, deviceHeading) {
+    LaunchedEffect(foregroundStarted, lastLocation, deviceHeading) {
+        if (!foregroundStarted) return@LaunchedEffect
+        while (true) {
+            freshnessTick = SystemClock.elapsedRealtime()
+            delay(250)
+        }
+    }
+
+    val direction = remember(lastLocation, deviceHeading, freshnessTick) {
         directionFor(lastLocation, deviceHeading, lastReliableCourse)
     }
     if (direction.source == DirectionSource.COURSE) {
@@ -156,21 +170,53 @@ fun HostedMapView(
                 headingSource.stop()
             }
         }
+        var mapStarted = false
+        var mapResumed = false
+        fun startMap() {
+            if (!mapStarted) {
+                mapStarted = true
+                mapView.onStart()
+            }
+        }
+        fun resumeMap() {
+            startMap()
+            if (!mapResumed) {
+                mapResumed = true
+                mapView.onResume()
+            }
+        }
+        fun pauseMap() {
+            if (mapResumed) {
+                mapResumed = false
+                mapView.onPause()
+            }
+        }
+        fun stopMap() {
+            pauseMap()
+            if (mapStarted) {
+                mapStarted = false
+                mapView.onStop()
+            }
+        }
         var destroyed = false
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> {
-                    mapView.onStart()
+                    foregroundStarted = true
+                    startMap()
                     startHeading()
                 }
-                Lifecycle.Event.ON_RESUME -> mapView.onResume()
-                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_RESUME -> resumeMap()
+                Lifecycle.Event.ON_PAUSE -> pauseMap()
                 Lifecycle.Event.ON_STOP -> {
+                    foregroundStarted = false
                     stopHeading()
-                    mapView.onStop()
+                    stopMap()
                 }
                 Lifecycle.Event.ON_DESTROY -> if (!destroyed) {
+                    foregroundStarted = false
                     stopHeading()
+                    stopMap()
                     destroyed = true
                     mapView.onDestroy()
                 }
@@ -178,10 +224,23 @@ fun HostedMapView(
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) startHeading()
+        when {
+            lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) -> {
+                foregroundStarted = true
+                startHeading()
+                resumeMap()
+            }
+            lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) -> {
+                foregroundStarted = true
+                startHeading()
+                startMap()
+            }
+        }
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            foregroundStarted = false
             stopHeading()
+            stopMap()
             if (!destroyed) {
                 destroyed = true
                 mapView.onDestroy()

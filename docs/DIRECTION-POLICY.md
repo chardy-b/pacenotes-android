@@ -24,7 +24,9 @@ A location update is passed to MapLibre and to the camera controller through the
 3. **Retained course** — a most-recent reliable course may be held for at most **3 seconds** while stopped or transiently uncertain.
 4. **North-up** — if none of the above are credible, the map bearing is `0°`. The status wording says that it is awaiting direction rather than implying a heading.
 
-`Location` bearing is optional, so it is never treated as available solely because a location permission exists. Course is preferred while moving because it describes travel direction rather than the way the phone is held.
+`Location` bearing is optional, so it is never treated as available solely because a location permission exists. Course is preferred while moving because it describes travel direction rather than the way the phone is held. Future timestamps are rejected rather than treated as fresh.
+
+Freshness is actively reevaluated every 250 ms while the host lifecycle is `STARTED`, even if no GPS or sensor callback arrives. A last rendered source therefore expires at its documented threshold rather than leaving a stale directional claim on-screen.
 
 ## Device heading implementation and limits
 

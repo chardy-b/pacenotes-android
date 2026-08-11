@@ -89,6 +89,37 @@ class DirectionPolicyTest {
     }
 
     @Test
+    fun futureTimestampsAreRejectedRatherThanTreatedAsFresh() {
+        val futureCourse = DirectionPolicy.select(
+            DirectionInput(
+                courseBearingDegrees = 90.0,
+                courseBearingAccuracyDegrees = 5.0,
+                speedMetresPerSecond = 6.0,
+                locationAgeMillis = -1,
+                deviceHeadingDegrees = null,
+                deviceHeadingAgeMillis = null,
+                deviceHeadingAccuracy = DeviceHeadingAccuracy.UNRELIABLE,
+            ),
+        )
+        val futureHeading = DirectionPolicy.select(
+            DirectionInput(
+                courseBearingDegrees = null,
+                courseBearingAccuracyDegrees = null,
+                speedMetresPerSecond = 0.0,
+                locationAgeMillis = 100,
+                deviceHeadingDegrees = 180.0,
+                deviceHeadingAgeMillis = -1,
+                deviceHeadingAccuracy = DeviceHeadingAccuracy.HIGH,
+                lastReliableCourseDegrees = 270.0,
+                lastReliableCourseAgeMillis = -1,
+            ),
+        )
+
+        assertEquals(DirectionSource.NORTH_UP, futureCourse.source)
+        assertEquals(DirectionSource.NORTH_UP, futureHeading.source)
+    }
+
+    @Test
     fun unavailableRotationVectorLeavesNoDeviceHeadingAndFallsNorthUp() {
         val decision = DirectionPolicy.select(
             DirectionInput(

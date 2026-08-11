@@ -17,7 +17,7 @@ object DirectionPolicy {
         val course = input.courseBearingDegrees
         val courseIsReliable = course.isBearing() &&
             input.speedMetresPerSecond >= MIN_TRAVEL_SPEED_METRES_PER_SECOND &&
-            input.locationAgeMillis <= MAX_LOCATION_AGE_MILLIS &&
+            input.locationAgeMillis in 0..MAX_LOCATION_AGE_MILLIS &&
             (input.courseBearingAccuracyDegrees == null ||
                 input.courseBearingAccuracyDegrees <= MAX_BEARING_ACCURACY_DEGREES)
         if (courseIsReliable) {
@@ -27,7 +27,7 @@ object DirectionPolicy {
         val deviceHeading = input.deviceHeadingDegrees
         val headingIsReliable = deviceHeading.isBearing() &&
             input.deviceHeadingAgeMillis != null &&
-            input.deviceHeadingAgeMillis <= MAX_DEVICE_HEADING_AGE_MILLIS &&
+            input.deviceHeadingAgeMillis in 0..MAX_DEVICE_HEADING_AGE_MILLIS &&
             input.deviceHeadingAccuracy.isReliable
         if (headingIsReliable) {
             return DirectionDecision(deviceHeading!!.normalize(), DirectionSource.DEVICE_HEADING)
@@ -36,7 +36,7 @@ object DirectionPolicy {
         val retainedCourse = input.lastReliableCourseDegrees
         if (retainedCourse.isBearing() &&
             input.lastReliableCourseAgeMillis != null &&
-            input.lastReliableCourseAgeMillis <= MAX_RETAINED_COURSE_AGE_MILLIS
+            input.lastReliableCourseAgeMillis in 0..MAX_RETAINED_COURSE_AGE_MILLIS
         ) {
             return DirectionDecision(retainedCourse!!.normalize(), DirectionSource.RETAINED_COURSE)
         }
