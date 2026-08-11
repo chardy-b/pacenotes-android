@@ -150,8 +150,11 @@ class DirectionPolicyTest {
         val smoother = CircularHeadingSmoother()
 
         assertEquals(359.0, smoother.update(359.0, 0), 0.001)
-        val acrossNorth = smoother.update(1.0, 300)
-        assertTrue("must turn through north rather than spin almost 360 degrees", acrossNorth < 1.0 || acrossNorth > 359.0)
+        val acrossNorth = smoother.update(9.0, 300)
+        assertTrue(
+            "must turn through north rather than spin almost 360 degrees",
+            acrossNorth in 0.0..9.0,
+        )
         assertEquals(acrossNorth, smoother.update(acrossNorth + 1.0, 600), 0.001)
     }
 
