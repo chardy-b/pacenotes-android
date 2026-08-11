@@ -21,7 +21,7 @@ A location update is passed to MapLibre and to the camera controller through the
    - the fix is no older than **5 seconds** according to elapsed realtime;
    - where Android supplies bearing accuracy (`hasBearingAccuracy()`), it is at most **35°**.
 2. **Fused device heading** — only if a current **`TYPE_ROTATION_VECTOR`** reading is no older than **2 seconds** and reports Android sensor accuracy `MEDIUM` or `HIGH`.
-3. **Retained course** — a most-recent reliable course may be held for at most **3 seconds** while stopped or transiently uncertain.
+3. **Retained course** — a most-recent reliable course may be held for at most **3 seconds** while stopped or transiently uncertain. Its expiry is anchored to the delivered Android location fix's elapsed-realtime timestamp, never Compose recomposition time.
 4. **North-up** — if none of the above are credible, the map bearing is `0°`. The status wording says that it is awaiting direction rather than implying a heading.
 
 `Location` bearing is optional, so it is never treated as available solely because a location permission exists. Course is preferred while moving because it describes travel direction rather than the way the phone is held. Future timestamps are rejected rather than treated as fresh.

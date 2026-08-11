@@ -78,7 +78,10 @@ fun HostedMapView(
                             .useSpecializedLocationLayer(true)
                             .locationEngine(
                                 PlatformGpsLocationEngine(context) { location ->
-                                    view.post { lastLocation = location }
+                                    view.post {
+                                        updateRetainedCourseFromDeliveredLocation(location, lastReliableCourse)
+                                        lastLocation = location
+                                    }
                                 },
                             )
                             .useDefaultLocationEngine(false)
@@ -108,10 +111,6 @@ fun HostedMapView(
 
     val direction = remember(lastLocation, deviceHeading, freshnessTick) {
         directionFor(lastLocation, deviceHeading, lastReliableCourse)
-    }
-    if (direction.source == DirectionSource.COURSE) {
-        lastReliableCourse.bearingDegrees = direction.bearingDegrees
-        lastReliableCourse.observedAtMillis = SystemClock.elapsedRealtime()
     }
     val smoothedBearing = remember(lastLocation, deviceHeading, direction, viewMode) {
         if (viewMode == MapViewMode.NORTH_UP) 0.0 else smoother.update(direction.bearingDegrees, SystemClock.elapsedRealtime())
@@ -246,6 +245,18 @@ fun HostedMapView(
                 mapView.onDestroy()
             }
         }
+    }
+}
+
+private fun updateRetainedCourseFromDeliveredLocation(
+    location: Location,
+    retainedCourse: LastReliableCourse,
+) {
+    val decision = directionFor(location, heading = null, retainedCourse = retainedCourse)
+    if (decision.source == DirectionSource.COURSE) {
+        retainedCourse.bearingDegrees = decision.bearingDegrees
+        // Bind retention to the actual Android fix time, never a Compose recomposition time.
+        retainedCourse.observedAtMillis = location.elapsedRealtimeNanos / 1_000_000L
     }
 }
 
