@@ -21,7 +21,10 @@ import org.maplibre.android.location.engine.LocationEngineResult
  * framework's criteria-based selection choosing a fused/passive provider that does
  * not receive emulator GNSS fixes or produce a MapLibre puck.
  */
-class PlatformGpsLocationEngine(context: Context) : LocationEngine {
+class PlatformGpsLocationEngine(
+    context: Context,
+    private val onLocationDelivered: (Location) -> Unit = {},
+) : LocationEngine {
     private val locationManager = context.getSystemService(LocationManager::class.java)
     private val listeners = mutableMapOf<LocationEngineCallback<LocationEngineResult>, LocationListener>()
 
@@ -45,6 +48,7 @@ class PlatformGpsLocationEngine(context: Context) : LocationEngine {
     ) {
         removeLocationUpdates(callback)
         val listener = LocationListener { location ->
+            onLocationDelivered(location)
             callback.onSuccess(LocationEngineResult.create(location))
         }
         listeners[callback] = listener

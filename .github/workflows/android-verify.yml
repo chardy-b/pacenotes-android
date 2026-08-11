@@ -16,6 +16,7 @@ on:
   push:
     branches:
       - teo/wil-70-p0-13-hosted-openfreemap-mvp
+      - teo/wil-76-p0-16-navigation-camera-direction
     paths:
       - "app/**"
       - "core-model/**"
@@ -96,12 +97,18 @@ jobs:
             if [ "$ready" -ne 1 ]; then echo 'Timed out waiting for hosted MapLibre render readiness' >&2; adb logcat -d -v threadtime > device-logcat.txt; exit 1; fi &&
             adb emu geo fix -122.4194 37.7749 &&
             sleep 2 &&
-            adb emu geo fix -122.4194 37.7749 &&
+            adb emu geo fix -122.4184 37.7759 &&
             sleep 3 &&
             adb shell dumpsys location > location-state.txt &&
-            grep -q 'Location\[gps 37\.7749' location-state.txt &&
+            grep -q 'Location\[gps 37\.7759' location-state.txt &&
             adb shell pidof com.rich.rallypacenotes &&
-            adb exec-out screencap -p > hosted-map.png &&
+            adb exec-out screencap -p > navigation-map.png &&
+            adb shell uiautomator dump /sdcard/app-window.xml >/dev/null &&
+            adb exec-out cat /sdcard/app-window.xml > app-window.xml &&
+            toggle_bounds=$(python3 -c "import sys,xml.etree.ElementTree as E; node=next(n for n in E.parse(sys.argv[1]).iter('node') if n.attrib.get('content-desc') == 'Switch to north-up map'); print(*node.attrib['bounds'].replace('[', '').replace(']', ',').replace(',', ' ').split())" app-window.xml) &&
+            set -- $toggle_bounds && adb shell input tap $((($1+$3)/2)) $((($2+$4)/2)) &&
+            sleep 2 &&
+            adb exec-out screencap -p > north-up-map.png &&
             app_pid=$(adb shell pidof com.rich.rallypacenotes) &&
             adb logcat -d -v threadtime --pid="$app_pid" > app-logcat.txt &&
             adb logcat -d -t 500 > device-logcat.txt
@@ -116,7 +123,9 @@ jobs:
             instrumentation-output.txt
             permission-request.png
             permission-window.xml
-            hosted-map.png
+            navigation-map.png
+            north-up-map.png
+            app-window.xml
             location-state.txt
             app-logcat.txt
             device-logcat.txt
@@ -127,14 +136,14 @@ jobs:
           {
             echo "## Required user-review evidence"
             echo
-            echo "Before accepting this emulator run or publishing its APK, inspect \`hosted-map.png\` from \`android-instrumentation-reports\`."
+            echo "Before accepting this emulator run or publishing its APK, inspect \`navigation-map.png\` and \`north-up-map.png\` from \`android-instrumentation-reports\`."
             echo
             echo "- [ ] \`permission-request.png\` shows Android's initial location-permission dialog, not an in-app permission button."
-            echo "- [ ] The app—not Android system UI—is visible."
-            echo "- [ ] Northern California basemap features have rendered; the map is not a blank style surface."
-            echo "- [ ] Attribution is visible."
-            echo "- [ ] The current-location marker is visible at the injected coordinate."
-            echo "- [ ] Review \`app-logcat.txt\` and \`location-state.txt\` for the same run."
+            echo "- [ ] Both images show the app—not Android system UI—and Northern California basemap features rather than a blank style surface."
+            echo "- [ ] Attribution and a clearly visible native current-location marker appear in both images."
+            echo "- [ ] \`navigation-map.png\` shows the close, tilted, moving-location navigation camera and its visible direction indicator."
+            echo "- [ ] \`north-up-map.png\` shows the same location with top-down north-up orientation after the semantic FAB toggle."
+            echo "- [ ] Review \`app-window.xml\`, \`app-logcat.txt\`, and \`location-state.txt\` for the same run."
           } >> "$GITHUB_STEP_SUMMARY"
 
   release-phone-test:
