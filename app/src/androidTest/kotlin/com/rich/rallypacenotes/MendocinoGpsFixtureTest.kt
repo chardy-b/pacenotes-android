@@ -55,12 +55,12 @@ class MendocinoGpsFixtureTest {
         inject(39.3247032, -123.8003182)
 
         assertLogEventually("GPS fix latitude=39.3247032", CALLBACK_TIMEOUT_MILLIS)
+        composeRule.waitForIdle()
         assertLogEventually(
             "Camera request mode=NAVIGATION latitude=39.3247032",
             CALLBACK_TIMEOUT_MILLIS,
         )
 
-        composeRule.waitForIdle()
         Thread.sleep(CAMERA_SETTLE_MILLIS)
         composeRule.onNodeWithContentDescription("Switch to north-up map")
             .assertIsDisplayed()
