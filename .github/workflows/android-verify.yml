@@ -77,7 +77,7 @@ jobs:
           emulator-boot-timeout: 900
           cores: 2
           script: >-
-            set -e; trap 'adb logcat -d -t 1000 > device-logcat.txt || true; adb shell dumpsys location > location-state.txt || true; app_pid=$(adb shell pidof com.rich.rallypacenotes || true); if [ -n "$app_pid" ]; then adb logcat -d -v threadtime --pid="$app_pid" > app-logcat.txt || true; fi' EXIT; ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleDebugAndroidTest &&
+            set -ex; trap 'adb logcat -d -t 1000 > device-logcat.txt || true; adb shell dumpsys location > location-state.txt || true; app_pid=$(adb shell pidof com.rich.rallypacenotes || true); if [ -n "$app_pid" ]; then adb logcat -d -v threadtime --pid="$app_pid" > app-logcat.txt || true; fi' EXIT; ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleDebugAndroidTest &&
             adb devices -l &&
             adb install -r app/build/outputs/apk/debug/app-debug.apk &&
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk &&
