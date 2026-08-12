@@ -23,6 +23,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.rich.rallypacenotes.R
+import java.util.Locale
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -60,10 +61,31 @@ fun HostedMapView(
     val mapView = remember(locationPermissionGranted) {
         MapView(context).also { view ->
             view.onCreate(null)
+            var pendingCameraFrame: String? = null
             view.addOnDidFinishRenderingMapListener { fullyRendered ->
-                if (fullyRendered) Log.i(LOG_TAG, "Hosted map render completed")
+                if (fullyRendered) {
+                    Log.i(LOG_TAG, "Hosted map render completed")
+                    pendingCameraFrame?.let { geometry ->
+                        Log.i(LOG_TAG, "Camera frame rendered $geometry")
+                        pendingCameraFrame = null
+                    }
+                }
             }
             view.getMapAsync { map ->
+                map.addOnCameraIdleListener {
+                    val position = map.cameraPosition
+                    val geometry = String.format(
+                        Locale.US,
+                        "latitude=%.7f longitude=%.7f zoom=%.1f pitch=%.1f bearing=%.1f",
+                        position.target.latitude,
+                        position.target.longitude,
+                        position.zoom,
+                        position.tilt,
+                        position.bearing,
+                    )
+                    Log.i(LOG_TAG, "Camera idle $geometry")
+                    pendingCameraFrame = geometry
+                }
                 map.setStyle(Style.Builder().fromUri(HostedMapStyle.LIBERTY_STYLE_URI)) { style ->
                     Log.i(LOG_TAG, "OpenFreeMap Liberty style loaded")
                     map.moveCamera(CameraUpdateFactory.newLatLngZoom(NORCAL_CENTER, NORCAL_DEFAULT_ZOOM))

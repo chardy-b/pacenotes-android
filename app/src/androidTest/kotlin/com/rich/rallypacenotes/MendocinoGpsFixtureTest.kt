@@ -38,6 +38,9 @@ class MendocinoGpsFixtureTest {
 
     @Test
     fun injectsNorthboundHighwayOneCourse() {
+        instrumentation.uiAutomation.executeShellCommand("logcat -c").use { descriptor ->
+            FileInputStream(descriptor.fileDescriptor).use { input -> input.readBytes() }
+        }
         replaceGpsWithTestProvider()
         instrumentation.uiAutomation.executeShellCommand(
             "am start -W -n $PACKAGE_NAME/.MainActivity",
@@ -60,10 +63,14 @@ class MendocinoGpsFixtureTest {
             "Camera request mode=NAVIGATION latitude=39.3247032",
             CALLBACK_TIMEOUT_MILLIS,
         )
-
-        composeRule.onNodeWithContentDescription("Switch to north-up map")
-            .assertIsDisplayed()
-        Thread.sleep(CAMERA_SETTLE_MILLIS)
+        assertLogEventually(
+            "Camera idle latitude=39.3247032 longitude=-123.8003182 zoom=17.0 pitch=50.0",
+            CALLBACK_TIMEOUT_MILLIS,
+        )
+        assertLogEventually(
+            "Camera frame rendered latitude=39.3247032 longitude=-123.8003182 zoom=17.0 pitch=50.0",
+            CALLBACK_TIMEOUT_MILLIS,
+        )
         captureScreenshot("navigation-map.png")
         dumpWindowHierarchy("app-window.xml")
         captureLocationState()
@@ -77,7 +84,14 @@ class MendocinoGpsFixtureTest {
             "Camera request mode=NORTH_UP latitude=39.3247032 longitude=-123.8003182 bearing=0.0 pitch=0.0",
             CALLBACK_TIMEOUT_MILLIS,
         )
-        Thread.sleep(CAMERA_SETTLE_MILLIS)
+        assertLogEventually(
+            "Camera idle latitude=39.3247032 longitude=-123.8003182 zoom=17.0 pitch=0.0 bearing=0.0",
+            CALLBACK_TIMEOUT_MILLIS,
+        )
+        assertLogEventually(
+            "Camera frame rendered latitude=39.3247032 longitude=-123.8003182 zoom=17.0 pitch=0.0 bearing=0.0",
+            CALLBACK_TIMEOUT_MILLIS,
+        )
         captureScreenshot("north-up-map.png")
         dumpWindowHierarchy("north-up-window.xml")
         println("Mendocino GPS evidence captured: navigation and north-up camera states verified")
@@ -187,7 +201,6 @@ class MendocinoGpsFixtureTest {
         const val LISTENER_TIMEOUT_MILLIS = 30_000L
         const val CALLBACK_TIMEOUT_MILLIS = 30_000L
         const val MAP_RENDER_TIMEOUT_MILLIS = 60_000L
-        const val CAMERA_SETTLE_MILLIS = 1_000L
         const val LOG_POLL_MILLIS = 500L
         const val EVIDENCE_DIRECTORY = "wil76-evidence"
         const val PNG_QUALITY = 100
