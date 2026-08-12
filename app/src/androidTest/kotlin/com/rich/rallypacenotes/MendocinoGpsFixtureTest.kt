@@ -61,9 +61,9 @@ class MendocinoGpsFixtureTest {
             CALLBACK_TIMEOUT_MILLIS,
         )
 
-        Thread.sleep(CAMERA_SETTLE_MILLIS)
         composeRule.onNodeWithContentDescription("Switch to north-up map")
             .assertIsDisplayed()
+        Thread.sleep(CAMERA_SETTLE_MILLIS)
         captureScreenshot("navigation-map.png")
         dumpWindowHierarchy("app-window.xml")
         captureLocationState()
