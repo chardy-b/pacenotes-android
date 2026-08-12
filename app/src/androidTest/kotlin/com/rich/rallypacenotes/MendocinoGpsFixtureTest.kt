@@ -46,6 +46,7 @@ class MendocinoGpsFixtureTest {
             "GPS provider/listener registered provider=gps",
             LISTENER_TIMEOUT_MILLIS,
         )
+        assertLogEventually("Hosted map render completed", MAP_RENDER_TIMEOUT_MILLIS)
 
         inject(39.3200773, -123.8027450)
         Thread.sleep(FIXTURE_INTERVAL_MILLIS)
@@ -58,7 +59,6 @@ class MendocinoGpsFixtureTest {
             "Camera request mode=NAVIGATION latitude=39.3247032",
             CALLBACK_TIMEOUT_MILLIS,
         )
-        assertLogEventually("Hosted map render completed", MAP_RENDER_TIMEOUT_MILLIS)
 
         composeRule.waitForIdle()
         Thread.sleep(CAMERA_SETTLE_MILLIS)
