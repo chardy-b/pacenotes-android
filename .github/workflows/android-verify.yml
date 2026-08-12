@@ -96,15 +96,17 @@ jobs:
             adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
             ready=0 && for attempt in $(seq 1 60); do if adb logcat -d -v brief HostedMapView:I '*:S' | grep -q 'Hosted map render completed'; then ready=1; break; fi; sleep 1; done &&
             if [ "$ready" -ne 1 ]; then echo 'Timed out waiting for hosted MapLibre render readiness' >&2; adb logcat -d -v threadtime > device-logcat.txt; exit 1; fi &&
-            adb emu geo nmea '$GPGGA,000000.00,3919.2046,N,12348.1647,W,1,08,0.9,10.0,M,0.0,M,,*74' &&
-            adb emu geo nmea '$GPRMC,000000.00,A,3919.2046,N,12348.1647,W,19.4,22.0,120826,,,A*45' &&
+            adb logcat -c &&
+            nmea() { sentence="$1"; checksum=0; for byte in $(printf '%s' "$sentence" | od -An -tu1); do checksum=$((checksum ^ byte)); done; printf '$%s*%02X\n' "$sentence" "$checksum"; } &&
+            inject_mendocino_fix() { latitude="$1"; longitude="$2"; now_utc=$(date -u +%H%M%S.00); date_utc=$(date -u +%d%m%y); adb emu geo nmea "$(nmea "GPGGA,$now_utc,$latitude,N,$longitude,W,1,08,0.9,10.0,M,0.0,M,,")" && adb emu geo nmea "$(nmea "GPRMC,$now_utc,A,$latitude,N,$longitude,W,19.4,22.0,$date_utc,,,A")"; } &&
+            inject_mendocino_fix 3919.2046 12348.1647 &&
             sleep 2 &&
-            adb emu geo nmea '$GPGGA,000002.00,3919.3432,N,12348.0924,W,1,08,0.9,10.0,M,0.0,M,,*7B' &&
-            adb emu geo nmea '$GPRMC,000002.00,A,3919.3432,N,12348.0924,W,19.4,22.0,120826,,,A*4A' &&
+            inject_mendocino_fix 3919.3432 12348.0924 &&
             sleep 2 &&
-            adb emu geo nmea '$GPGGA,000004.00,3919.4822,N,12348.0191,W,1,08,0.9,10.0,M,0.0,M,,*71' &&
-            adb emu geo nmea '$GPRMC,000004.00,A,3919.4822,N,12348.0191,W,19.4,22.0,120826,,,A*40' &&
-            navigation_camera=0 && for attempt in $(seq 1 20); do if adb logcat -d -v brief HostedMapView:I '*:S' | grep -q 'Camera request mode=NAVIGATION.*pitch=50.0'; then navigation_camera=1; break; fi; sleep 1; done &&
+            inject_mendocino_fix 3919.4822 12348.0191 &&
+            mendocino_fix=0 && for attempt in $(seq 1 20); do if adb logcat -d -v brief PlatformGpsLocationEngine:I '*:S' | grep -q 'GPS fix latitude=39\.3247.*speed=[1-9].*bearing=2[12](\.0)?'; then mendocino_fix=1; break; fi; sleep 1; done &&
+            test "$mendocino_fix" -eq 1 &&
+            navigation_camera=0 && for attempt in $(seq 1 20); do if adb logcat -d -v brief HostedMapView:I '*:S' | grep -q 'Camera request mode=NAVIGATION.*latitude=39\.3247.*pitch=50.0'; then navigation_camera=1; break; fi; sleep 1; done &&
             test "$navigation_camera" -eq 1 &&
             sleep 1 &&
             adb shell dumpsys location > location-state.txt &&
