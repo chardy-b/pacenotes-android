@@ -75,7 +75,7 @@ jobs:
           arch: x86_64
           profile: pixel_7_pro
           emulator-boot-timeout: 900
-          cores: 4
+          cores: 2
           script: >-
             set -e; trap 'adb logcat -d -t 1000 > device-logcat.txt || true; app_pid=$(adb shell pidof com.rich.rallypacenotes || true); if [ -n "$app_pid" ]; then adb logcat -d -v threadtime --pid="$app_pid" > app-logcat.txt || true; fi' EXIT; ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleDebugAndroidTest &&
             adb devices -l &&
@@ -83,9 +83,10 @@ jobs:
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk &&
             adb shell pm revoke com.rich.rallypacenotes android.permission.ACCESS_FINE_LOCATION || true &&
             adb shell pm revoke com.rich.rallypacenotes android.permission.ACCESS_COARSE_LOCATION || true &&
+            adb shell am force-stop com.google.android.googlesdksetup || true &&
             adb shell am force-stop com.rich.rallypacenotes &&
             adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
-            permission_dialog=0 && for attempt in $(seq 1 20); do adb shell uiautomator dump /sdcard/permission-window.xml >/dev/null && adb exec-out cat /sdcard/permission-window.xml > permission-window.xml && if grep -q 'While using the app' permission-window.xml; then permission_dialog=1; break; fi; sleep 1; done &&
+            permission_dialog=0 && for attempt in $(seq 1 30); do adb shell uiautomator dump /sdcard/permission-window.xml >/dev/null && adb exec-out cat /sdcard/permission-window.xml > permission-window.xml && if grep -q 'While using the app' permission-window.xml; then permission_dialog=1; break; fi; if grep -q "com.google.android.googlesdksetup isn't responding" permission-window.xml; then close_bounds=$(python3 -c "import sys,xml.etree.ElementTree as E; node=next(n for n in E.parse(sys.argv[1]).iter('node') if n.attrib.get('text') == 'Close app'); print(*node.attrib['bounds'].replace('[', '').replace(']', ',').replace(',', ' ').split())" permission-window.xml) && set -- $close_bounds && adb shell input tap $((($1+$3)/2)) $((($2+$4)/2)); fi; sleep 1; done &&
             test "$permission_dialog" -eq 1 &&
             adb exec-out screencap -p > permission-request.png &&
             adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_FINE_LOCATION &&
