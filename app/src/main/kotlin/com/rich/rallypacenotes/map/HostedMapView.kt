@@ -61,15 +61,8 @@ fun HostedMapView(
     val mapView = remember(locationPermissionGranted) {
         MapView(context).also { view ->
             view.onCreate(null)
-            var pendingCameraFrame: String? = null
             view.addOnDidFinishRenderingMapListener { fullyRendered ->
-                if (fullyRendered) {
-                    Log.i(LOG_TAG, "Hosted map render completed")
-                    pendingCameraFrame?.let { geometry ->
-                        Log.i(LOG_TAG, "Camera frame rendered $geometry")
-                        pendingCameraFrame = null
-                    }
-                }
+                if (fullyRendered) Log.i(LOG_TAG, "Hosted map render completed")
             }
             view.getMapAsync { map ->
                 map.addOnCameraIdleListener {
@@ -85,7 +78,6 @@ fun HostedMapView(
                         position.bearing,
                     )
                     Log.i(LOG_TAG, "Camera idle $geometry")
-                    pendingCameraFrame = geometry
                 }
                 map.setStyle(Style.Builder().fromUri(HostedMapStyle.LIBERTY_STYLE_URI)) { style ->
                     Log.i(LOG_TAG, "OpenFreeMap Liberty style loaded")
