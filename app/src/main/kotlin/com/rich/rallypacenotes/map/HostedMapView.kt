@@ -141,6 +141,11 @@ fun HostedMapView(
                 .bearing(spec.bearingDegrees)
                 .tilt(spec.pitchDegrees)
                 .build()
+            Log.i(
+                LOG_TAG,
+                "Camera request mode=$viewMode latitude=${spec.latitude} longitude=${spec.longitude} " +
+                    "bearing=${spec.bearingDegrees} pitch=${spec.pitchDegrees}",
+            )
             map.animateCamera(CameraUpdateFactory.newCameraPosition(camera), CAMERA_ANIMATION_DURATION_MILLIS)
         }
     }

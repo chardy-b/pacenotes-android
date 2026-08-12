@@ -55,7 +55,7 @@ MapLibre's native LocationComponent remains enabled with the app-owned direct-GP
 
 ## Evidence still required
 
-A GitHub-hosted API-35 emulator run must inject a moving sequence *after* the hosted map is fully rendered, then capture both mode screenshots and `dumpsys location` / app-log evidence. Review must confirm map render, attribution, native puck, navigation pitch/bearing/following, north-up bearing/pitch, and the inset-aware FAB. Permission denial/regrant, activity recreation, unavailable rotation-vector sensor, and no-fix behavior also require device coverage.
+A GitHub-hosted API-35 emulator run must inject a northbound driving sequence on CA-1 / Shoreline Highway near Mendocino *after* the hosted map is fully rendered. The fixture uses three NMEA RMC fixes at approximately **10 m/s** with a **22°** north-northeast course, then captures both mode screenshots and `dumpsys location` / app-log evidence. Review must confirm map render, attribution, native puck, navigation pitch/bearing/following, north-up bearing/pitch, and the inset-aware FAB. Permission denial/regrant, activity recreation, unavailable rotation-vector sensor, and no-fix behavior also require device coverage.
 
 ## Primary sources
 
