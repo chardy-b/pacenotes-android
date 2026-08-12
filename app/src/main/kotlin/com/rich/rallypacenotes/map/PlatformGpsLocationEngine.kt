@@ -69,6 +69,7 @@ class PlatformGpsLocationEngine(
             listener,
             looper,
         )
+        Log.i(LOG_TAG, "GPS provider/listener registered provider=${LocationManager.GPS_PROVIDER}")
     }
 
     @SuppressLint("MissingPermission")
