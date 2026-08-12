@@ -74,11 +74,12 @@ fun HostedMapView(
             view.getMapAsync { map ->
                 map.addOnCameraIdleListener {
                     val position = map.cameraPosition
+                    val target = position.target ?: return@addOnCameraIdleListener
                     val geometry = String.format(
                         Locale.US,
                         "latitude=%.7f longitude=%.7f zoom=%.1f pitch=%.1f bearing=%.1f",
-                        position.target.latitude,
-                        position.target.longitude,
+                        target.latitude,
+                        target.longitude,
                         position.zoom,
                         position.tilt,
                         position.bearing,
