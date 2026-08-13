@@ -134,20 +134,33 @@ class MendocinoGpsFixtureTest {
 
     private fun captureRequiredScreenshot(name: String) {
         evidenceDirectory.mkdirs()
-        val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot()) {
-            "Required screenshot capture failed for $name"
-        }
-        try {
-            File(evidenceDirectory, name).outputStream().use { output ->
-                check(bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, output)) {
-                    "Required screenshot write failed for $name"
-                }
+        var lastFailure: IllegalStateException? = null
+        repeat(SCREENSHOT_CAPTURE_ATTEMPTS) { attempt ->
+            val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot()) {
+                "Required screenshot capture failed for $name"
             }
-            check(File(evidenceDirectory, name).length() > 0) { "Required screenshot is empty: $name" }
-            validateRequiredVisualEvidence(bitmap, name)
-        } finally {
-            bitmap.recycle()
+            try {
+                File(evidenceDirectory, name).outputStream().use { output ->
+                    check(bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, output)) {
+                        "Required screenshot write failed for $name"
+                    }
+                }
+                check(File(evidenceDirectory, name).length() > 0) { "Required screenshot is empty: $name" }
+                try {
+                    validateRequiredVisualEvidence(bitmap, name)
+                    println("Required screenshot validated: $name attempt=${attempt + 1}")
+                    return
+                } catch (failure: IllegalStateException) {
+                    lastFailure = failure
+                }
+            } finally {
+                bitmap.recycle()
+            }
+            if (attempt + 1 < SCREENSHOT_CAPTURE_ATTEMPTS) {
+                SystemClock.sleep(SCREENSHOT_RETRY_INTERVAL_MILLIS)
+            }
         }
+        throw requireNotNull(lastFailure)
     }
 
     private fun validateRequiredVisualEvidence(bitmap: Bitmap, name: String) {
@@ -237,6 +250,8 @@ class MendocinoGpsFixtureTest {
         const val LOG_POLL_MILLIS = 500L
         const val EVIDENCE_DIRECTORY = "wil76-evidence"
         const val PNG_QUALITY = 100
+        const val SCREENSHOT_CAPTURE_ATTEMPTS = 6
+        const val SCREENSHOT_RETRY_INTERVAL_MILLIS = 1_000L
         const val PIXEL_SAMPLE_STEP = 4
         const val VISUAL_ROI_LEFT_PERCENT = 12
         const val VISUAL_ROI_RIGHT_PERCENT = 88
