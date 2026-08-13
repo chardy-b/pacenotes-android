@@ -39,6 +39,53 @@ private val NORCAL_CENTER = LatLng(39.10964, -121.01905)
 private const val NORCAL_DEFAULT_ZOOM = 7.0
 private const val CAMERA_ANIMATION_DURATION_MILLIS = 500
 private const val LOG_TAG = "HostedMapView"
+private const val CAMERA_RENDER_TOLERANCE = 0.01
+
+private data class PendingCameraRender(
+    val requestId: Long,
+    val mode: MapViewMode,
+    val spec: MapCameraSpec,
+)
+
+private class CameraRenderTracker {
+    private var nextRequestId = 0L
+    private var pending: PendingCameraRender? = null
+
+    fun expect(mode: MapViewMode, spec: MapCameraSpec) {
+        nextRequestId += 1
+        pending = PendingCameraRender(nextRequestId, mode, spec)
+    }
+
+    fun consumeMatching(position: CameraPosition): PendingCameraRender? {
+        val expected = pending ?: return null
+        val target = position.target ?: return null
+        if (!cameraPositionMatches(
+                expected = expected.spec,
+                latitude = target.latitude,
+                longitude = target.longitude,
+                zoom = position.zoom,
+                bearing = position.bearing,
+                pitch = position.tilt,
+            )
+        ) return null
+        pending = null
+        return expected
+    }
+}
+
+internal fun cameraPositionMatches(
+    expected: MapCameraSpec,
+    latitude: Double,
+    longitude: Double,
+    zoom: Double,
+    bearing: Double,
+    pitch: Double,
+): Boolean =
+    kotlin.math.abs(expected.latitude - latitude) <= CAMERA_RENDER_TOLERANCE &&
+        kotlin.math.abs(expected.longitude - longitude) <= CAMERA_RENDER_TOLERANCE &&
+        kotlin.math.abs(expected.zoom - zoom) <= CAMERA_RENDER_TOLERANCE &&
+        kotlin.math.abs(expected.bearingDegrees - bearing) <= CAMERA_RENDER_TOLERANCE &&
+        kotlin.math.abs(expected.pitchDegrees - pitch) <= CAMERA_RENDER_TOLERANCE
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -57,6 +104,7 @@ fun HostedMapView(
     var freshnessTick by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     val lastReliableCourse = remember { LastReliableCourse() }
     val smoother = remember { CircularHeadingSmoother() }
+    val cameraRenderTracker = remember { CameraRenderTracker() }
 
     val mapView = remember(locationPermissionGranted) {
         MapView(context).also { view ->
@@ -65,6 +113,19 @@ fun HostedMapView(
                 if (fullyRendered) Log.i(LOG_TAG, "Hosted map render completed")
             }
             view.getMapAsync { map ->
+                view.addOnDidFinishRenderingFrameListener { fullyRendered, _, _ ->
+                    if (fullyRendered) {
+                        cameraRenderTracker.consumeMatching(map.cameraPosition)?.let { rendered ->
+                            val spec = rendered.spec
+                            Log.i(
+                                LOG_TAG,
+                                "Camera frame rendered request=${rendered.requestId} mode=${rendered.mode} " +
+                                    "latitude=${spec.latitude} longitude=${spec.longitude} zoom=${spec.zoom} " +
+                                    "pitch=${spec.pitchDegrees} bearing=${spec.bearingDegrees}",
+                            )
+                        }
+                    }
+                }
                 map.addOnCameraIdleListener {
                     val position = map.cameraPosition
                     val target = position.target ?: return@addOnCameraIdleListener
@@ -156,6 +217,7 @@ fun HostedMapView(
                 .bearing(spec.bearingDegrees)
                 .tilt(spec.pitchDegrees)
                 .build()
+            cameraRenderTracker.expect(viewMode, spec)
             Log.i(
                 LOG_TAG,
                 "Camera request mode=$viewMode latitude=${spec.latitude} longitude=${spec.longitude} " +

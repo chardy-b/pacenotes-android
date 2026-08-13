@@ -1,6 +1,7 @@
 package com.rich.rallypacenotes.map
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -166,6 +167,20 @@ class DirectionPolicyTest {
         assertEquals(-122.4184, camera.longitude, 0.001)
         assertEquals(0.0, camera.bearingDegrees, 0.001)
         assertEquals(0.0, camera.pitchDegrees, 0.001)
+    }
+
+    @Test
+    fun renderedCameraMustMatchEveryRequestedGeometryField() {
+        val expected = cameraSpecFor(
+            viewMode = MapViewMode.NORTH_UP,
+            latitude = 39.3247032,
+            longitude = -123.8003182,
+            navigationBearingDegrees = 22.0,
+        )
+
+        assertTrue(cameraPositionMatches(expected, 39.3247032, -123.8003182, 17.0, 0.0, 0.0))
+        assertFalse(cameraPositionMatches(expected, 39.3247032, -123.8003182, 17.0, 22.0, 50.0))
+        assertFalse(cameraPositionMatches(expected, 39.3247032, -123.8003182, 16.0, 0.0, 0.0))
     }
 
     @Test

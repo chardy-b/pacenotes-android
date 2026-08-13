@@ -67,12 +67,17 @@ class MendocinoGpsFixtureTest {
             "Camera idle latitude=39.3247032 longitude=-123.8003182 zoom=17.0 pitch=50.0",
             CALLBACK_TIMEOUT_MILLIS,
         )
+        assertLogEventually(
+            "mode=NAVIGATION latitude=39.3247032 longitude=-123.8003182 zoom=17.0 pitch=50.0",
+            CALLBACK_TIMEOUT_MILLIS,
+        )
         captureRequiredScreenshot("navigation-map.png")
         dumpWindowHierarchy("app-window.xml")
         captureLocationState()
 
         composeRule.onNodeWithContentDescription("Switch to north-up map")
             .performClick()
+        Thread.sleep(CAMERA_TOGGLE_SETTLE_MILLIS)
         composeRule.waitForIdle()
         composeRule.onNodeWithContentDescription("Switch to navigation view")
             .assertIsDisplayed()
@@ -84,7 +89,12 @@ class MendocinoGpsFixtureTest {
             "Camera idle latitude=39.3247032 longitude=-123.8003182 zoom=17.0 pitch=0.0 bearing=0.0",
             CALLBACK_TIMEOUT_MILLIS,
         )
+        assertLogEventually(
+            "mode=NORTH_UP latitude=39.3247032 longitude=-123.8003182 zoom=17.0 pitch=0.0 bearing=0.0",
+            CALLBACK_TIMEOUT_MILLIS,
+        )
         captureRequiredScreenshot("north-up-map.png")
+        validateCameraModesVisiblyDiffer()
         dumpWindowHierarchy("north-up-window.xml")
         println("Mendocino GPS behavior and required visual evidence verified")
     }
@@ -203,6 +213,46 @@ class MendocinoGpsFixtureTest {
         }
     }
 
+    private fun validateCameraModesVisiblyDiffer() {
+        val navigation = android.graphics.BitmapFactory.decodeFile(
+            File(evidenceDirectory, "navigation-map.png").absolutePath,
+        ) ?: error("Navigation screenshot could not be decoded")
+        val northUp = android.graphics.BitmapFactory.decodeFile(
+            File(evidenceDirectory, "north-up-map.png").absolutePath,
+        ) ?: error("North-up screenshot could not be decoded")
+        try {
+            check(navigation.width == northUp.width && navigation.height == northUp.height) {
+                "Camera screenshots have different dimensions"
+            }
+            val left = navigation.width * VISUAL_ROI_LEFT_PERCENT / 100
+            val right = navigation.width * VISUAL_ROI_RIGHT_PERCENT / 100
+            val top = navigation.height * VISUAL_ROI_TOP_PERCENT / 100
+            val bottom = navigation.height * VISUAL_ROI_BOTTOM_PERCENT / 100
+            var changedSamples = 0
+            var totalSamples = 0
+            for (y in top until bottom step PIXEL_SAMPLE_STEP) {
+                for (x in left until right step PIXEL_SAMPLE_STEP) {
+                    val navigationColor = navigation.getPixel(x, y)
+                    val northUpColor = northUp.getPixel(x, y)
+                    val largestChannelDifference = maxOf(
+                        kotlin.math.abs(android.graphics.Color.red(navigationColor) - android.graphics.Color.red(northUpColor)),
+                        kotlin.math.abs(android.graphics.Color.green(navigationColor) - android.graphics.Color.green(northUpColor)),
+                        kotlin.math.abs(android.graphics.Color.blue(navigationColor) - android.graphics.Color.blue(northUpColor)),
+                    )
+                    if (largestChannelDifference > CAMERA_MODE_PIXEL_DIFFERENCE) changedSamples += 1
+                    totalSamples += 1
+                }
+            }
+            val changedPercent = changedSamples * 100 / totalSamples
+            check(changedPercent >= MIN_CAMERA_MODE_CHANGED_PERCENT) {
+                "Navigation and north-up frames did not visibly change angle: changedPercent=$changedPercent"
+            }
+        } finally {
+            navigation.recycle()
+            northUp.recycle()
+        }
+    }
+
     private fun dumpWindowHierarchy(name: String) {
         evidenceDirectory.mkdirs()
         val root = requireNotNull(instrumentation.uiAutomation.rootInActiveWindow) {
@@ -247,6 +297,7 @@ class MendocinoGpsFixtureTest {
         const val LISTENER_TIMEOUT_MILLIS = 30_000L
         const val CALLBACK_TIMEOUT_MILLIS = 30_000L
         const val MAP_RENDER_TIMEOUT_MILLIS = 60_000L
+        const val CAMERA_TOGGLE_SETTLE_MILLIS = 500L
         const val LOG_POLL_MILLIS = 500L
         const val EVIDENCE_DIRECTORY = "wil76-evidence"
         const val PNG_QUALITY = 100
@@ -263,6 +314,8 @@ class MendocinoGpsFixtureTest {
         const val INDICATOR_ROI_BOTTOM_PERCENT = 60
         const val MIN_DIRECTION_PIXEL_SAMPLES = 20
         const val MAX_BLANK_SKY_PERCENT = 45
+        const val CAMERA_MODE_PIXEL_DIFFERENCE = 15
+        const val MIN_CAMERA_MODE_CHANGED_PERCENT = 20
         const val ACCURACY_METRES = 3f
         const val ALTITUDE_METRES = 10.0
         const val SPEED_METRES_PER_SECOND = 10f
