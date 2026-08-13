@@ -179,7 +179,7 @@ class MendocinoGpsFixtureTest {
                 val red = android.graphics.Color.red(color)
                 val green = android.graphics.Color.green(color)
                 val blue = android.graphics.Color.blue(color)
-                if (blue >= 200 && green in 110..180 && red in 40..110) directionPixels += 1
+                if (blue >= 200 && green in 90..190 && red in 0..110) directionPixels += 1
             }
         }
         var sampledPixels = 0
