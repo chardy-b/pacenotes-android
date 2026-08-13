@@ -67,7 +67,7 @@ class MendocinoGpsFixtureTest {
             "Camera idle latitude=39.3247032 longitude=-123.8003182 zoom=17.0 pitch=50.0",
             CALLBACK_TIMEOUT_MILLIS,
         )
-        captureDiagnosticScreenshot("navigation-map.png")
+        captureRequiredScreenshot("navigation-map.png")
         dumpWindowHierarchy("app-window.xml")
         captureLocationState()
 
@@ -84,9 +84,9 @@ class MendocinoGpsFixtureTest {
             "Camera idle latitude=39.3247032 longitude=-123.8003182 zoom=17.0 pitch=0.0 bearing=0.0",
             CALLBACK_TIMEOUT_MILLIS,
         )
-        captureDiagnosticScreenshot("north-up-map.png")
+        captureRequiredScreenshot("north-up-map.png")
         dumpWindowHierarchy("north-up-window.xml")
-        println("Mendocino GPS behavior verified; diagnostic screenshots attempted")
+        println("Mendocino GPS behavior and required visual evidence verified")
     }
 
     private fun replaceGpsWithTestProvider() {
@@ -132,19 +132,61 @@ class MendocinoGpsFixtureTest {
         .executeShellCommand("logcat -d -v brief PlatformGpsLocationEngine:I HostedMapView:I '*:S'")
         .use { descriptor -> BufferedReader(InputStreamReader(java.io.FileInputStream(descriptor.fileDescriptor))).readText() }
 
-    private fun captureDiagnosticScreenshot(name: String) {
+    private fun captureRequiredScreenshot(name: String) {
+        evidenceDirectory.mkdirs()
+        val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot()) {
+            "Required screenshot capture failed for $name"
+        }
         try {
-            evidenceDirectory.mkdirs()
-            val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
-            try {
-                File(evidenceDirectory, name).outputStream().use { output ->
-                    check(bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, output))
+            validateRequiredVisualEvidence(bitmap, name)
+            File(evidenceDirectory, name).outputStream().use { output ->
+                check(bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, output)) {
+                    "Required screenshot write failed for $name"
                 }
-            } finally {
-                bitmap.recycle()
             }
-        } catch (error: Exception) {
-            println("Diagnostic screenshot unavailable: $name: ${error.message}")
+        } finally {
+            bitmap.recycle()
+        }
+        check(File(evidenceDirectory, name).length() > 0) { "Required screenshot is empty: $name" }
+    }
+
+    private fun validateRequiredVisualEvidence(bitmap: Bitmap, name: String) {
+        val left = bitmap.width * VISUAL_ROI_LEFT_PERCENT / 100
+        val right = bitmap.width * VISUAL_ROI_RIGHT_PERCENT / 100
+        val top = bitmap.height * VISUAL_ROI_TOP_PERCENT / 100
+        val bottom = bitmap.height * VISUAL_ROI_BOTTOM_PERCENT / 100
+        val indicatorLeft = bitmap.width * INDICATOR_ROI_LEFT_PERCENT / 100
+        val indicatorRight = bitmap.width * INDICATOR_ROI_RIGHT_PERCENT / 100
+        val indicatorTop = bitmap.height * INDICATOR_ROI_TOP_PERCENT / 100
+        val indicatorBottom = bitmap.height * INDICATOR_ROI_BOTTOM_PERCENT / 100
+        var directionPixels = 0
+        for (y in indicatorTop until indicatorBottom step PIXEL_SAMPLE_STEP) {
+            for (x in indicatorLeft until indicatorRight step PIXEL_SAMPLE_STEP) {
+                val color = bitmap.getPixel(x, y)
+                val red = android.graphics.Color.red(color)
+                val green = android.graphics.Color.green(color)
+                val blue = android.graphics.Color.blue(color)
+                if (blue >= 200 && green in 110..180 && red in 40..110) directionPixels += 1
+            }
+        }
+        var sampledPixels = 0
+        var blankSkyPixels = 0
+        for (y in top until bottom step PIXEL_SAMPLE_STEP) {
+            for (x in left until right step PIXEL_SAMPLE_STEP) {
+                val color = bitmap.getPixel(x, y)
+                val red = android.graphics.Color.red(color)
+                val green = android.graphics.Color.green(color)
+                val blue = android.graphics.Color.blue(color)
+                sampledPixels += 1
+                if (blue >= 200 && blue - red >= 50 && blue - green >= 25) blankSkyPixels += 1
+            }
+        }
+        check(directionPixels >= MIN_DIRECTION_PIXEL_SAMPLES) {
+            "Required direction indicator was not visible in $name: samples=$directionPixels"
+        }
+        val blankSkyPercent = blankSkyPixels * 100 / sampledPixels
+        check(blankSkyPercent <= MAX_BLANK_SKY_PERCENT) {
+            "Required map surface was blank or incomplete in $name: blankSkyPercent=$blankSkyPercent"
         }
     }
 
@@ -195,6 +237,17 @@ class MendocinoGpsFixtureTest {
         const val LOG_POLL_MILLIS = 500L
         const val EVIDENCE_DIRECTORY = "wil76-evidence"
         const val PNG_QUALITY = 100
+        const val PIXEL_SAMPLE_STEP = 4
+        const val VISUAL_ROI_LEFT_PERCENT = 12
+        const val VISUAL_ROI_RIGHT_PERCENT = 88
+        const val VISUAL_ROI_TOP_PERCENT = 16
+        const val VISUAL_ROI_BOTTOM_PERCENT = 84
+        const val INDICATOR_ROI_LEFT_PERCENT = 40
+        const val INDICATOR_ROI_RIGHT_PERCENT = 60
+        const val INDICATOR_ROI_TOP_PERCENT = 40
+        const val INDICATOR_ROI_BOTTOM_PERCENT = 60
+        const val MIN_DIRECTION_PIXEL_SAMPLES = 20
+        const val MAX_BLANK_SKY_PERCENT = 45
         const val ACCURACY_METRES = 3f
         const val ALTITUDE_METRES = 10.0
         const val SPEED_METRES_PER_SECOND = 10f
