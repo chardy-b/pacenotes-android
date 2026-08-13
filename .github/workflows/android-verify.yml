@@ -11,6 +11,7 @@ on:
       - "gradle/**"
       - "gradlew"
       - ".github/workflows/android-verify.yml"
+      - ".github/scripts/**"
   workflow_dispatch:
     inputs:
       run_instrumentation:
@@ -104,7 +105,7 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: >-
-            set -e; trap 'for artifact in navigation-map.png north-up-map.png app-window.xml north-up-window.xml location-state.txt; do adb exec-out run-as com.rich.rallypacenotes cat "files/wil76-evidence/$artifact" > "$artifact" || rm -f "$artifact"; done; adb logcat -d -t 1000 > device-logcat.txt || true; adb shell dumpsys location > location-state.txt || true; app_pid=$(adb shell pidof com.rich.rallypacenotes || true); if [ -n "$app_pid" ]; then adb logcat -d -v threadtime --pid="$app_pid" > app-logcat.txt || true; fi' EXIT; ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleDebugAndroidTest &&
+            set -e; valid_png() { python3 .github/scripts/validate-png.py "$1"; }; capture_png() { adb exec-out screencap -p > "$1" && valid_png "$1"; }; trap 'status=$?; capture_png final-screen.png || rm -f final-screen.png; for artifact in navigation-map.png north-up-map.png app-window.xml north-up-window.xml location-state.txt; do adb exec-out run-as com.rich.rallypacenotes cat "files/wil76-evidence/$artifact" > "$artifact" || rm -f "$artifact"; case "$artifact" in *.png) valid_png "$artifact" || rm -f "$artifact" ;; esac; done; adb logcat -d -t 1000 > device-logcat.txt || true; adb shell dumpsys location > location-state.txt || true; app_pid=$(adb shell pidof com.rich.rallypacenotes || true); if [ -n "$app_pid" ]; then adb logcat -d -v threadtime --pid="$app_pid" > app-logcat.txt || true; fi; exit "$status"' EXIT; capture_png emulator-ready.png && ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleDebugAndroidTest &&
             adb devices -l &&
             adb install -r app/build/outputs/apk/debug/app-debug.apk &&
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk &&
@@ -113,12 +114,16 @@ jobs:
             adb shell am force-stop com.google.android.googlesdksetup || true &&
             adb shell am force-stop com.rich.rallypacenotes &&
             adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
-            permission_dialog=0 && for attempt in $(seq 1 30); do adb shell uiautomator dump /sdcard/permission-window.xml >/dev/null && adb exec-out cat /sdcard/permission-window.xml > permission-window.xml && if grep -q 'While using the app' permission-window.xml; then permission_dialog=1; break; fi; if grep -q "com.google.android.googlesdksetup isn't responding" permission-window.xml; then close_bounds=$(python3 -c "import sys,xml.etree.ElementTree as E; node=next(n for n in E.parse(sys.argv[1]).iter('node') if n.attrib.get('text') == 'Close app'); print(*node.attrib['bounds'].replace('[', '').replace(']', ',').replace(',', ' ').split())" permission-window.xml) && set -- $close_bounds && adb shell input tap $((($1+$3)/2)) $((($2+$4)/2)); fi; sleep 1; done &&
+            capture_png app-launched.png &&
+            permission_dialog=0 && unexpected_dialog=0 && for attempt in $(seq 1 30); do adb shell uiautomator dump /sdcard/permission-window.xml >/dev/null && adb exec-out cat /sdcard/permission-window.xml > permission-window.xml && capture_png permission-poll.png && if grep -q 'While using the app' permission-window.xml; then permission_dialog=1; break; fi; if grep -q "com.google.android.googlesdksetup isn't responding" permission-window.xml; then close_bounds=$(python3 -c "import re,sys,xml.etree.ElementTree as E; node=next(n for n in E.parse(sys.argv[1]).iter('node') if n.attrib.get('text') == 'Close app'); values=[int(v) for v in re.findall(r'\\d+',node.attrib['bounds'])]; assert len(values)==4; print(*values)" permission-window.xml) && set -- $close_bounds && adb shell input tap $((($1+$3)/2)) $((($2+$4)/2)); elif grep -q "isn't responding" permission-window.xml; then cp permission-poll.png unexpected-dialog.png; unexpected_dialog=1; break; fi; sleep 1; done &&
+            test "$unexpected_dialog" -eq 0 &&
             test "$permission_dialog" -eq 1 &&
-            adb exec-out screencap -p > permission-request.png &&
+            capture_png permission-request.png &&
             adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_FINE_LOCATION &&
             adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_COARSE_LOCATION &&
+            capture_png permissions-granted.png &&
             { instrumentation_exit=0; adb shell am instrument -w -r -e class com.rich.rallypacenotes.ReplayAlphaAppInstrumentedTest com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > instrumentation-output.txt || instrumentation_exit=$?; cat instrumentation-output.txt; adb logcat -d -t 500 > device-logcat.txt; test "$instrumentation_exit" -eq 0; ! grep -q "FAILURES!!!" instrumentation-output.txt; grep -q "OK (" instrumentation-output.txt; } &&
+            capture_png standard-tests-complete.png &&
             adb shell run-as com.rich.rallypacenotes rm -rf files/wil76-evidence &&
             adb logcat -c &&
             adb shell appops set com.rich.rallypacenotes.test android:mock_location allow &&
@@ -148,6 +153,13 @@ jobs:
             instrumentation-output.txt
             mendocino-fixture-output.txt
             permission-request.png
+            emulator-ready.png
+            app-launched.png
+            permission-poll.png
+            unexpected-dialog.png
+            permissions-granted.png
+            standard-tests-complete.png
+            final-screen.png
             permission-window.xml
             navigation-map.png
             north-up-map.png
@@ -156,7 +168,7 @@ jobs:
             location-state.txt
             app-logcat.txt
             device-logcat.txt
-          if-no-files-found: error
+          if-no-files-found: warn
       - name: Record visual evidence checklist
         if: ${{ always() }}
         run: |
