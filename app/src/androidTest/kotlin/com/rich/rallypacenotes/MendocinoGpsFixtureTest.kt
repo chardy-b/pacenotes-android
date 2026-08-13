@@ -138,16 +138,16 @@ class MendocinoGpsFixtureTest {
             "Required screenshot capture failed for $name"
         }
         try {
-            validateRequiredVisualEvidence(bitmap, name)
             File(evidenceDirectory, name).outputStream().use { output ->
                 check(bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, output)) {
                     "Required screenshot write failed for $name"
                 }
             }
+            check(File(evidenceDirectory, name).length() > 0) { "Required screenshot is empty: $name" }
+            validateRequiredVisualEvidence(bitmap, name)
         } finally {
             bitmap.recycle()
         }
-        check(File(evidenceDirectory, name).length() > 0) { "Required screenshot is empty: $name" }
     }
 
     private fun validateRequiredVisualEvidence(bitmap: Bitmap, name: String) {
