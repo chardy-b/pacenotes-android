@@ -7,6 +7,7 @@ on:
       - "core-model/**"
       - "pacenotes/**"
       - "*.gradle.kts"
+      - "gradle.properties"
       - "gradle/**"
       - "gradlew"
       - ".github/workflows/android-verify.yml"
@@ -22,19 +23,6 @@ on:
         required: false
         type: boolean
         default: false
-  push:
-    branches:
-      - teo/wil-70-p0-13-hosted-openfreemap-mvp
-      - teo/wil-76-p0-16-navigation-camera-direction
-    paths:
-      - "app/**"
-      - "core-model/**"
-      - "pacenotes/**"
-      - "*.gradle.kts"
-      - "gradle/**"
-      - "gradlew"
-      - ".github/workflows/android-verify.yml"
-
 permissions:
   contents: read
 
@@ -76,6 +64,35 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Restore API-35 emulator snapshot
+        id: avd-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api35-google-apis-x86-64-pixel-7-pro-runner-v2
+      - name: Create clean API-35 emulator snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          emulator-boot-timeout: 900
+          cores: 2
+          force-avd-creation: true
+          emulator-options: -wipe-data -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated clean API-35 AVD snapshot."
+      - name: Verify clean API-35 snapshot before caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        run: |
+          test -f ~/.android/avd/test.ini
+          test -f ~/.android/avd/test.avd/config.ini
+          test -d ~/.android/avd/test.avd/snapshots/default_boot
+          test -n "$(find ~/.android/avd/test.avd/snapshots/default_boot -type f -print -quit)"
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -84,6 +101,8 @@ jobs:
           profile: pixel_7_pro
           emulator-boot-timeout: 900
           cores: 2
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: >-
             set -e; trap 'for artifact in navigation-map.png north-up-map.png app-window.xml north-up-window.xml location-state.txt; do adb exec-out run-as com.rich.rallypacenotes cat "files/wil76-evidence/$artifact" > "$artifact" || rm -f "$artifact"; done; adb logcat -d -t 1000 > device-logcat.txt || true; adb shell dumpsys location > location-state.txt || true; app_pid=$(adb shell pidof com.rich.rallypacenotes || true); if [ -n "$app_pid" ]; then adb logcat -d -v threadtime --pid="$app_pid" > app-logcat.txt || true; fi' EXIT; ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleDebugAndroidTest &&
             adb devices -l &&
