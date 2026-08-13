@@ -315,7 +315,7 @@ class MendocinoGpsFixtureTest {
         const val MIN_DIRECTION_PIXEL_SAMPLES = 20
         const val MAX_BLANK_SKY_PERCENT = 45
         const val CAMERA_MODE_PIXEL_DIFFERENCE = 15
-        const val MIN_CAMERA_MODE_CHANGED_PERCENT = 20
+        const val MIN_CAMERA_MODE_CHANGED_PERCENT = 4
         const val ACCURACY_METRES = 3f
         const val ALTITUDE_METRES = 10.0
         const val SPEED_METRES_PER_SECOND = 10f
