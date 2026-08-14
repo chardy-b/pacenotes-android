@@ -48,6 +48,25 @@ class CurveDetectorTest {
         point(0.0006, 0.0008) to 128.0,
     )
 
+    private val overlongSameDirectionFixture = fixture(
+        "overlong-same-direction-v1",
+        point(0.0000000, 0.0000000) to 0.0,
+        point(0.0000000, 0.0002300) to 23.0,
+        point(0.0000399, 0.0004565) to 46.0,
+        point(0.0001186, 0.0006726) to 69.0,
+        point(0.0002336, 0.0008718) to 92.0,
+        point(0.0003814, 0.0010480) to 115.0,
+        point(0.0005576, 0.0011959) to 138.0,
+        point(0.0007568, 0.0013109) to 161.0,
+        point(0.0009730, 0.0013895) to 184.0,
+        point(0.0011995, 0.0014295) to 207.0,
+        point(0.0014295, 0.0014295) to 230.0,
+        point(0.0016560, 0.0013895) to 253.0,
+        point(0.0018721, 0.0013109) to 276.0,
+        point(0.0020713, 0.0011959) to 299.0,
+        point(0.0022475, 0.0010480) to 322.0,
+    )
+
     private val shortZigZagNoiseFixture = fixture(
         "short-zig-zag-noise-v1",
         point(0.0, 0.0) to 0.0,
@@ -123,6 +142,11 @@ class CurveDetectorTest {
         assertEquals(CurveDirection.LEFT, candidate.direction)
         assertEquals(-42.0, candidate.signedTurnDegrees)
         assertEquals(4, candidate.severity)
+    }
+
+    @Test
+    fun suppressesSameDirectionCandidateBeyond250Meters() {
+        assertEquals(emptyList(), CurveDetector.detect(overlongSameDirectionFixture))
     }
 
     @Test

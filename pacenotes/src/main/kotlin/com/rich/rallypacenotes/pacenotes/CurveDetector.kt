@@ -4,6 +4,7 @@ object CurveDetector {
     private const val HEADING_NOISE_FLOOR_DEGREES = 3.0
     private const val MINIMUM_ACCUMULATED_TURN_DEGREES = 20.0
     private const val MINIMUM_CURVE_LENGTH_METERS = 15.0
+    private const val MAXIMUM_CURVE_SPAN_METERS = 250.0
 
     fun detect(route: NormalizedRoute): List<CurveCandidate> {
         val headings = route.samples.zipWithNext { from, to ->
@@ -20,7 +21,8 @@ object CurveDetector {
             val endDistance = route.samples[endSampleIndex].routeDistanceMeters
             if (
                 kotlin.math.abs(groupTurnDegrees) >= MINIMUM_ACCUMULATED_TURN_DEGREES &&
-                endDistance - startDistance >= MINIMUM_CURVE_LENGTH_METERS
+                endDistance - startDistance >= MINIMUM_CURVE_LENGTH_METERS &&
+                endDistance - startDistance <= MAXIMUM_CURVE_SPAN_METERS
             ) {
                 candidates += CurveCandidate(
                     direction = if (groupTurnDegrees < 0.0) CurveDirection.LEFT else CurveDirection.RIGHT,
