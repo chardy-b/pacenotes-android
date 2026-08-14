@@ -1,0 +1,206 @@
+name: Phone-test prerelease
+
+on:
+  workflow_dispatch:
+    inputs:
+      device_run_id:
+        description: Successful Android device gate run ID
+        required: true
+        type: string
+      expected_commit_sha:
+        description: Full commit SHA verified by that device run
+        required: true
+        type: string
+      release_tag:
+        description: New prerelease tag, for example wil85-phone-test-abc1234
+        required: true
+        type: string
+      release_name:
+        description: Human-readable prerelease name
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: phone-test-release-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish verified phone-test APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate source run and requested release
+        id: validate
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        env:
+          DEVICE_RUN_ID: ${{ inputs.device_run_id }}
+          EXPECTED_SHA: ${{ inputs.expected_commit_sha }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        with:
+          script: |
+            const runId = Number(process.env.DEVICE_RUN_ID);
+            const expectedSha = process.env.EXPECTED_SHA;
+            const releaseTag = process.env.RELEASE_TAG;
+            if (!Number.isSafeInteger(runId) || runId <= 0) {
+              core.setFailed("device_run_id must be a positive integer");
+              return;
+            }
+            if (!/^[0-9a-f]{40}$/.test(expectedSha)) {
+              core.setFailed("expected_commit_sha must be a full lowercase 40-character SHA");
+              return;
+            }
+            if (!/^[A-Za-z0-9._-]+$/.test(releaseTag)) {
+              core.setFailed("release_tag may contain only letters, numbers, dot, underscore, and hyphen");
+              return;
+            }
+            const {data: run} = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId,
+            });
+            if (run.repository.full_name !== `${context.repo.owner}/${context.repo.repo}`) {
+              core.setFailed(`source run repository mismatch: ${run.repository.full_name}`);
+              return;
+            }
+            if (run.name !== "Android device gate" || run.path !== ".github/workflows/android-device-gate.yml" || run.event !== "workflow_dispatch") {
+              core.setFailed(`run ${runId} is not the repository Android device gate workflow`);
+              return;
+            }
+            if (run.status !== "completed" || run.conclusion !== "success") {
+              core.setFailed(`run ${runId} is ${run.status}/${run.conclusion}`);
+              return;
+            }
+            if (run.head_sha !== expectedSha) {
+              core.setFailed(`source run head ${run.head_sha} does not match expected ${expectedSha}`);
+              return;
+            }
+            const {data: artifacts} = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId,
+              per_page: 100,
+            });
+            const expectedArtifact = `android-device-evidence-${expectedSha}`;
+            const artifact = artifacts.artifacts.find(item => item.name === expectedArtifact && !item.expired);
+            if (!artifact) {
+              core.setFailed(`required unexpired artifact ${expectedArtifact} was not found`);
+              return;
+            }
+            core.setOutput("artifact_name", expectedArtifact);
+            core.setOutput("source_run_url", run.html_url);
+      - name: Download exact tested device artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.device_run_id }}
+          name: ${{ steps.validate.outputs.artifact_name }}
+          path: verified-device-evidence
+      - name: Verify artifact manifest and APK checksum
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_commit_sha }}
+          EXPECTED_RUN_ID: ${{ inputs.device_run_id }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("verified-device-evidence")
+          manifest_path = root / "evidence-manifest.json"
+          apk_path = root / "app-debug.apk"
+          manifest = json.loads(manifest_path.read_text())
+          assert manifest["repository"] == os.environ["GITHUB_REPOSITORY"]
+          assert manifest["commit_sha"] == os.environ["EXPECTED_SHA"]
+          assert manifest["actions_run_id"] == int(os.environ["EXPECTED_RUN_ID"])
+          assert manifest["workflow"] == "Android device gate"
+          assert manifest["workflow_ref_sha"] == os.environ["EXPECTED_SHA"]
+          assert manifest["apk_path"] == "app-debug.apk"
+          assert apk_path.stat().st_size == manifest["apk_size_bytes"]
+          digest = hashlib.sha256(apk_path.read_bytes()).hexdigest()
+          assert digest == manifest["apk_sha256"]
+          (root / "verified-apk-sha256.txt").write_text(digest + "\n")
+          PY
+          cp verified-device-evidence/app-debug.apk "rally-pacenotes-${EXPECTED_SHA}-debug.apk"
+      - name: Ensure release tag resolves to verified commit
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_commit_sha }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        with:
+          script: |
+            const tagRef = `tags/${process.env.RELEASE_TAG}`;
+            const fullRef = `refs/${tagRef}`;
+            async function resolveCommit(object) {
+              for (let depth = 0; depth < 4; depth += 1) {
+                if (object.type === "commit") return object.sha;
+                if (object.type !== "tag") return null;
+                const {data: tag} = await github.rest.git.getTag({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag_sha: object.sha,
+                });
+                object = tag.object;
+              }
+              return null;
+            }
+            let object = null;
+            try {
+              const {data: existing} = await github.rest.git.getRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: tagRef,
+              });
+              object = existing.object;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+            if (object === null) {
+              try {
+                await github.rest.git.createRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: fullRef,
+                  sha: process.env.EXPECTED_SHA,
+                });
+                object = {type: "commit", sha: process.env.EXPECTED_SHA};
+              } catch (error) {
+                if (error.status !== 422) throw error;
+                const {data: raced} = await github.rest.git.getRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: tagRef,
+                });
+                object = raced.object;
+              }
+            }
+            const tagCommit = await resolveCommit(object);
+            if (tagCommit !== process.env.EXPECTED_SHA) {
+              core.setFailed(`release tag ${process.env.RELEASE_TAG} resolves to ${tagCommit}, not verified commit ${process.env.EXPECTED_SHA}`);
+              return;
+            }
+            core.info(`release tag ${process.env.RELEASE_TAG} is fixed at verified commit ${tagCommit}`);
+      - name: Publish or update prerelease without rebuilding
+        uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 # v2.3.3
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          name: ${{ inputs.release_name }}
+          prerelease: true
+          generate_release_notes: false
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          body: |
+            This APK is the unchanged artifact verified by the successful API-35 device gate.
+
+            Commit: `${{ inputs.expected_commit_sha }}`
+            Device-gate run: ${{ steps.validate.outputs.source_run_url }}
+            Source artifact: `${{ steps.validate.outputs.artifact_name }}`
+
+            Physical-device behavior remains user evidence and is separate from emulator verification.
+          files: rally-pacenotes-${{ inputs.expected_commit_sha }}-debug.apk
