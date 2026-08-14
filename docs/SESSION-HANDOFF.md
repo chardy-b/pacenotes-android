@@ -14,7 +14,7 @@ You are continuing **Rally Pacenotes Android**, a credential-free Android MVP th
 3. Read docs/DECISIONS.md before changing scope or architecture.
 4. Read docs/plans/2026-08-01-p0-03-route-progress-pacenote-domain.md for the completed model boundary.
 5. Check git status before touching files.
-6. After WIL-10 final verification is accepted, execute P0-06 stateful GPX location matcher and route-revision handling; it is not currently unblocked.
+6. After WIL-10 remote CI verification is accepted, execute P0-06 stateful GPX location matcher and route-revision handling; it is now unblocked. Local Android SDK access remains unavailable, and no physical-device or instrumentation validation is claimed.
 ```
 
 ## Current state
@@ -26,9 +26,9 @@ You are continuing **Rally Pacenotes Android**, a credential-free Android MVP th
 - `pacenotes` is a pure Kotlin/JVM module depending only on `core-model`; it contains stable spherical distance/heading primitives and fixed-distance route normalization with typed discontinuity suppression.
 - WIL-10 curve classification is complete: it consumes only app-owned normalized geometry and conservatively detects candidates using synthetic fixtures. Candidates longer than 250 m, or with any per-step heading change over 60°, are suppressed.
 - WIL-10 does not recognize real topology or junctions and does not use GPS matching, map/provider data, speed, hazards, phrases, or event IDs. Junction-like and roundabout-like fixtures are geometry-shape evidence only.
-- WIL-10 `:pacenotes:test` passed on 2026-08-14. Local `:app:assembleDebug` failed because the Android SDK location is unavailable; no GitHub Actions workflow or fallback was found in this checkout. Final verification remains blocked and WIL-10 is not fully done.
+- WIL-10 `:pacenotes:test` passed on 2026-08-14. At exact head `7e75840844cb7223355db313f30fc6f8c7c3cc6c`, GitHub Actions run `31766037397` completed successfully: `Build and unit tests` completed/success, including the debug APK build and app/core-model/pacenotes unit tests. `API 35 instrumentation tests` completed/skipped because this classifier ticket is not device-specific and manual dispatch was not requested. Local Android SDK remains unavailable; no physical-device instrumentation is claimed. P0-06 is now unblocked.
 - Last P0-04 focused verification: `./gradlew --no-daemon -Dorg.gradle.jvmargs='-Xmx512m -Dfile.encoding=UTF-8' -Dorg.gradle.workers.max=1 :pacenotes:test --tests '*RouteNormalizerTest*' --rerun-tasks` succeeded on 2026-08-01.
-- P0-06 stateful GPX location matcher and route-revision handling remains blocked until WIL-10 final verification is accepted; it is not yet unblocked. A minor deferred coverage refinement remains: add direct regression coverage distinguishing an accepted exact 60° step from a rejected step greater than 60°.
+- P0-06 stateful GPX location matcher and route-revision handling is now unblocked by WIL-10 remote CI verification. A minor deferred coverage refinement remains: add direct regression coverage distinguishing an accepted exact 60° step from a rejected step greater than 60°.
 
 ## Security rules
 
