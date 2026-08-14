@@ -1,6 +1,17 @@
 name: Android verification
 
 on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "core-model/**"
+      - "pacenotes/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - "gradle/**"
+      - "gradlew"
+      - ".github/workflows/android-verify.yml"
+      - ".github/scripts/**"
   workflow_dispatch:
     inputs:
       run_instrumentation:
@@ -9,25 +20,12 @@ on:
         type: boolean
         default: false
       publish_phone_test_release:
-        description: Publish the candidate debug APK only after the captured emulator screenshot has been reviewed
+        description: Publish the candidate debug APK after the blocking API-35 behavior evidence passes
         required: false
         type: boolean
         default: false
-  push:
-    branches:
-      - teo/wil-70-p0-13-hosted-openfreemap-mvp
-    paths:
-      - "app/**"
-      - "core-model/**"
-      - "pacenotes/**"
-      - "*.gradle.kts"
-      - "gradle/**"
-      - "gradlew"
-      - ".github/workflows/android-verify.yml"
-
 permissions:
-  actions: read
-  contents: write
+  contents: read
 
 # Keep only the newest verification for a ref; a later push supersedes an in-flight run.
 concurrency:
@@ -52,7 +50,7 @@ jobs:
   instrumentation:
     name: connected Android instrumentation tests
     needs: verify
-    if: ${{ inputs.run_instrumentation == true && needs.verify.result == 'success' }}
+    if: ${{ (github.event_name == 'pull_request' || inputs.run_instrumentation == true) && needs.verify.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -67,6 +65,35 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Restore API-35 emulator snapshot
+        id: avd-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api35-google-apis-x86-64-pixel-7-pro-runner-v2
+      - name: Create clean API-35 emulator snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          emulator-boot-timeout: 900
+          cores: 2
+          force-avd-creation: true
+          emulator-options: -wipe-data -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated clean API-35 AVD snapshot."
+      - name: Verify clean API-35 snapshot before caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        run: |
+          test -f ~/.android/avd/test.ini
+          test -f ~/.android/avd/test.avd/config.ini
+          test -d ~/.android/avd/test.avd/snapshots/default_boot
+          test -n "$(find ~/.android/avd/test.avd/snapshots/default_boot -type f -print -quit)"
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -74,36 +101,46 @@ jobs:
           arch: x86_64
           profile: pixel_7_pro
           emulator-boot-timeout: 900
-          cores: 4
+          cores: 2
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: >-
-            ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleDebugAndroidTest &&
+            set -e; valid_png() { python3 .github/scripts/validate-png.py "$1"; }; capture_png() { adb exec-out screencap -p > "$1" && valid_png "$1"; }; trap 'status=$?; capture_png final-screen.png || rm -f final-screen.png; for artifact in navigation-map.png north-up-map.png app-window.xml north-up-window.xml location-state.txt; do adb exec-out run-as com.rich.rallypacenotes cat "files/wil76-evidence/$artifact" > "$artifact" || rm -f "$artifact"; case "$artifact" in *.png) valid_png "$artifact" || rm -f "$artifact" ;; esac; done; adb logcat -d -t 1000 > device-logcat.txt || true; adb shell dumpsys location > location-state.txt || true; app_pid=$(adb shell pidof com.rich.rallypacenotes || true); if [ -n "$app_pid" ]; then adb logcat -d -v threadtime --pid="$app_pid" > app-logcat.txt || true; fi; exit "$status"' EXIT; capture_png emulator-ready.png && ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleDebugAndroidTest &&
             adb devices -l &&
             adb install -r app/build/outputs/apk/debug/app-debug.apk &&
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk &&
             adb shell pm revoke com.rich.rallypacenotes android.permission.ACCESS_FINE_LOCATION || true &&
             adb shell pm revoke com.rich.rallypacenotes android.permission.ACCESS_COARSE_LOCATION || true &&
+            adb shell am force-stop com.google.android.googlesdksetup || true &&
             adb shell am force-stop com.rich.rallypacenotes &&
             adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
-            permission_dialog=0 && for attempt in $(seq 1 20); do adb shell uiautomator dump /sdcard/permission-window.xml >/dev/null && adb exec-out cat /sdcard/permission-window.xml > permission-window.xml && if grep -q 'While using the app' permission-window.xml; then permission_dialog=1; break; fi; sleep 1; done &&
+            capture_png app-launched.png &&
+            permission_dialog=0 && unexpected_dialog=0 && for attempt in $(seq 1 30); do adb shell uiautomator dump /sdcard/permission-window.xml >/dev/null && adb exec-out cat /sdcard/permission-window.xml > permission-window.xml && capture_png permission-poll.png && if grep -q 'While using the app' permission-window.xml; then permission_dialog=1; break; fi; if grep -q "com.google.android.googlesdksetup isn't responding" permission-window.xml; then close_bounds=$(python3 -c "import re,sys,xml.etree.ElementTree as E; node=next(n for n in E.parse(sys.argv[1]).iter('node') if n.attrib.get('text') == 'Close app'); values=[int(v) for v in re.findall(r'\\d+',node.attrib['bounds'])]; assert len(values)==4; print(*values)" permission-window.xml) && set -- $close_bounds && adb shell input tap $((($1+$3)/2)) $((($2+$4)/2)); elif grep -q "isn't responding" permission-window.xml; then cp permission-poll.png unexpected-dialog.png; unexpected_dialog=1; break; fi; sleep 1; done &&
+            test "$unexpected_dialog" -eq 0 &&
             test "$permission_dialog" -eq 1 &&
-            adb exec-out screencap -p > permission-request.png &&
+            capture_png permission-request.png &&
             adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_FINE_LOCATION &&
             adb shell pm grant com.rich.rallypacenotes android.permission.ACCESS_COARSE_LOCATION &&
-            { instrumentation_exit=0; adb shell am instrument -w -r com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > instrumentation-output.txt || instrumentation_exit=$?; cat instrumentation-output.txt; adb logcat -d -t 500 > device-logcat.txt; test "$instrumentation_exit" -eq 0; ! grep -q "FAILURES!!!" instrumentation-output.txt; grep -q "OK (" instrumentation-output.txt; } &&
-            adb shell am force-stop com.rich.rallypacenotes &&
-            adb shell am start -W -n com.rich.rallypacenotes/.MainActivity &&
-            ready=0 && for attempt in $(seq 1 60); do if adb logcat -d -v brief HostedMapView:I '*:S' | grep -q 'Hosted map render completed'; then ready=1; break; fi; sleep 1; done &&
-            if [ "$ready" -ne 1 ]; then echo 'Timed out waiting for hosted MapLibre render readiness' >&2; adb logcat -d -v threadtime > device-logcat.txt; exit 1; fi &&
-            adb emu geo fix -122.4194 37.7749 &&
-            sleep 2 &&
-            adb emu geo fix -122.4194 37.7749 &&
-            sleep 3 &&
-            adb shell dumpsys location > location-state.txt &&
-            grep -q 'Location\[gps 37\.7749' location-state.txt &&
-            adb shell pidof com.rich.rallypacenotes &&
-            adb exec-out screencap -p > hosted-map.png &&
-            app_pid=$(adb shell pidof com.rich.rallypacenotes) &&
-            adb logcat -d -v threadtime --pid="$app_pid" > app-logcat.txt &&
+            capture_png permissions-granted.png &&
+            { instrumentation_exit=0; adb shell am instrument -w -r -e class com.rich.rallypacenotes.ReplayAlphaAppInstrumentedTest com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > instrumentation-output.txt || instrumentation_exit=$?; cat instrumentation-output.txt; adb logcat -d -t 500 > device-logcat.txt; test "$instrumentation_exit" -eq 0; ! grep -q "FAILURES!!!" instrumentation-output.txt; grep -q "OK (" instrumentation-output.txt; } &&
+            capture_png standard-tests-complete.png &&
+            adb shell run-as com.rich.rallypacenotes rm -rf files/wil76-evidence &&
+            adb logcat -c &&
+            adb shell appops set com.rich.rallypacenotes.test android:mock_location allow &&
+            adb shell appops set com.rich.rallypacenotes android:mock_location allow &&
+            adb shell appops get com.rich.rallypacenotes.test android:mock_location | grep -q 'allow' &&
+            adb shell appops get com.rich.rallypacenotes android:mock_location | grep -q 'allow' &&
+            { fixture_exit=0; adb shell am instrument -w -r -e class com.rich.rallypacenotes.MendocinoGpsFixtureTest com.rich.rallypacenotes.test/androidx.test.runner.AndroidJUnitRunner > mendocino-fixture-output.txt 2>&1 || fixture_exit=$?; cat mendocino-fixture-output.txt; test "$fixture_exit" -eq 0; grep -q 'OK (1 test)' mendocino-fixture-output.txt; } &&
+            adb exec-out run-as com.rich.rallypacenotes cat files/wil76-evidence/navigation-map.png > navigation-map.png && test -s navigation-map.png &&
+            adb exec-out run-as com.rich.rallypacenotes cat files/wil76-evidence/north-up-map.png > north-up-map.png && test -s north-up-map.png &&
+            adb exec-out run-as com.rich.rallypacenotes cat files/wil76-evidence/app-window.xml > app-window.xml &&
+            adb exec-out run-as com.rich.rallypacenotes cat files/wil76-evidence/north-up-window.xml > north-up-window.xml &&
+            adb exec-out run-as com.rich.rallypacenotes cat files/wil76-evidence/location-state.txt > location-state.txt &&
+            test -s app-window.xml && test -s north-up-window.xml && test -s location-state.txt &&
+            grep -q 'Switch to north-up map' app-window.xml &&
+            grep -q 'Switch to navigation view' north-up-window.xml &&
+            grep -q 'Location\[gps 39\.3247' location-state.txt &&
+            adb logcat -d -v threadtime PlatformGpsLocationEngine:I HostedMapView:I '*:S' > app-logcat.txt &&
             adb logcat -d -t 500 > device-logcat.txt
       - name: Upload instrumentation reports
         if: ${{ always() }}
@@ -114,27 +151,35 @@ jobs:
             app/build/outputs/apk/debug/app-debug.apk
             app/build/reports/androidTests/
             instrumentation-output.txt
+            mendocino-fixture-output.txt
             permission-request.png
+            emulator-ready.png
+            app-launched.png
+            permission-poll.png
+            unexpected-dialog.png
+            permissions-granted.png
+            standard-tests-complete.png
+            final-screen.png
             permission-window.xml
-            hosted-map.png
+            navigation-map.png
+            north-up-map.png
+            app-window.xml
+            north-up-window.xml
             location-state.txt
             app-logcat.txt
             device-logcat.txt
           if-no-files-found: warn
-      - name: Record required screenshot-review checklist
+      - name: Record visual evidence checklist
         if: ${{ always() }}
         run: |
           {
-            echo "## Required user-review evidence"
+            echo "## WIL-76 visual evidence"
             echo
-            echo "Before accepting this emulator run or publishing its APK, inspect \`hosted-map.png\` from \`android-instrumentation-reports\`."
+            echo "Both screenshots are required visual-composition evidence for this gate."
             echo
             echo "- [ ] \`permission-request.png\` shows Android's initial location-permission dialog, not an in-app permission button."
-            echo "- [ ] The app—not Android system UI—is visible."
-            echo "- [ ] Northern California basemap features have rendered; the map is not a blank style surface."
-            echo "- [ ] Attribution is visible."
-            echo "- [ ] The current-location marker is visible at the injected coordinate."
-            echo "- [ ] Review \`app-logcat.txt\` and \`location-state.txt\` for the same run."
+            echo "- [ ] Both images show the app rather than Android system UI."
+            echo "- [ ] Review \`app-window.xml\`, \`app-logcat.txt\`, and \`location-state.txt\` for the same run."
           } >> "$GITHUB_STEP_SUMMARY"
 
   release-phone-test:
@@ -156,7 +201,7 @@ jobs:
           prerelease: true
           generate_release_notes: false
           body: |
-            Review-required phone-test build. Before treating this APK as accepted or sharing it with a tester, inspect `hosted-map.png`, `app-logcat.txt`, and `location-state.txt` in the `android-instrumentation-reports` artifact from this exact run.
+            API-35 instrumentation and visual-evidence gate passed for this exact run. Review both map screenshots, semantic XML, `app-logcat.txt`, and `location-state.txt` in the exact-run artifact. This does not claim broader device or release acceptance.
 
             Verification run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           files: release-artifact/app/build/outputs/apk/debug/app-debug.apk

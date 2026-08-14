@@ -82,3 +82,11 @@ Use this as an append-only decision record. Do not rewrite earlier decisions; su
 - **Decision:** Prove the first real basemap using a locally imported Northern California vector-tile package, rendered by MapLibre without runtime network access. The self-hosted online-tile option remains deferred, not rejected.
 - **Why:** A single known region proves the real-map overlay while keeping Replay Alpha reliable, private, and independent of server setup.
 - **Consequence:** Generate and version map data off-device; require OSM/ODbL attribution and provenance; do not bundle the large generated package inside the APK. The package must be optional with an app-owned route-canvas fallback. This supersedes ADR-009 for the initial implementation sequence only.
+
+## ADR-011 — Hosted MapLibre navigation camera uses verified course before fused device heading
+
+- **Date:** 2026-08-11
+- **Status:** Accepted
+- **Decision:** For WIL-76, use the delivered Android `Location` course only when it is moving, fresh, and accurate; otherwise use a fresh, sufficiently accurate, display-remapped `TYPE_ROTATION_VECTOR` heading, retain a last reliable course only briefly, then hold north-up. Drive MapLibre's actual camera and native LocationComponent rather than a Compose marker overlay. Provide an explicit navigation/ north-up camera toggle.
+- **Why:** Course represents travel direction while moving; phone orientation does not. A raw accelerometer cannot provide yaw. The game rotation vector is not north-referenced. The fallback order avoids displaying a direction with unwarranted confidence while retaining useful orientation at low speed.
+- **Consequence:** The map uses bounded circular smoothing and animation; location, sensor, and visual device evidence must be verified in hosted emulator CI before WIL-76 closes. See [`DIRECTION-POLICY.md`](DIRECTION-POLICY.md) for thresholds, lifecycle/battery constraints, rendering behavior, and primary sources.
