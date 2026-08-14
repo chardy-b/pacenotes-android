@@ -109,8 +109,12 @@ jobs:
             ./gradlew --no-daemon --stacktrace :app:connectedDebugAndroidTest > "$EVIDENCE_DIR/instrumentation-output.txt" 2>&1 || instrumentation_exit=$?;
             test "$instrumentation_exit" -eq 0;
             grep -q 'BUILD SUCCESSFUL' "$EVIDENCE_DIR/instrumentation-output.txt";
+            adb install -r app/build/outputs/apk/debug/app-debug.apk;
+            adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$APPLICATION_ID" > "$EVIDENCE_DIR/launch-resolution.txt";
+            grep -Eq '^com\.rich\.rallypacenotes/(\.MainActivity|com\.rich\.rallypacenotes\.MainActivity)$' "$EVIDENCE_DIR/launch-resolution.txt";
             adb shell am force-stop "$APPLICATION_ID";
-            adb shell monkey -p "$APPLICATION_ID" 1 > "$EVIDENCE_DIR/launch-output.txt";
+            adb shell am start -W -n "$APPLICATION_ID/.MainActivity" > "$EVIDENCE_DIR/launch-output.txt";
+            grep -q '^Status: ok$' "$EVIDENCE_DIR/launch-output.txt";
             app_ready=0; for attempt in $(seq 1 30); do if adb shell pidof "$APPLICATION_ID" >/dev/null; then app_ready=1; break; fi; sleep 1; done;
             test "$app_ready" -eq 1;
             adb shell dumpsys activity activities > "$EVIDENCE_DIR/activity-state.txt";
