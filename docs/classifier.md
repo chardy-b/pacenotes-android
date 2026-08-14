@@ -25,6 +25,15 @@ sharp multi-sample curves while avoiding classification of the right-angle
 junction and roundabout-like fixtures; it does not identify actual topology.
 
 Heading changes below the 3-degree noise floor are not independently material.
+A signed delta whose absolute value is **at most 1e-8 degrees** is inclusive
+numerical zero: it is assigned sign zero even when floating-point arithmetic
+produces a non-zero residue. This numerical-zero deadband is distinct from the
+3-degree noise floor and the 1e-9-degree abrupt-step comparison tolerance.
+Numerical-zero deltas are neutral while a group is active, cannot start or
+accumulate pending evidence, and do not refresh the last evidence sample, so
+they cannot extend an endpoint. They therefore follow the same bounded neutral
+handling as exact zero.
+
 When no group is active, consecutive non-zero, same-sign sub-floor deltas are
 retained as pending evidence; they start a group only when their cumulative
 magnitude reaches 3 degrees, preserving the pending turn and span. Isolated,

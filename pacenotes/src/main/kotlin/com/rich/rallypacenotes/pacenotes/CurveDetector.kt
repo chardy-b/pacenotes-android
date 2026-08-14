@@ -6,6 +6,7 @@ object CurveDetector {
     private const val MAXIMUM_ABRUPT_STEP_DEGREES = 60.0
     // Spherical heading calculations can overshoot exact boundaries by tiny FP noise.
     private const val ANGULAR_COMPARISON_EPSILON_DEGREES = 1e-9
+    private const val NUMERICAL_ZERO_EPSILON_DEGREES = 1e-8
     private const val MINIMUM_ACCUMULATED_TURN_DEGREES = 20.0
     private const val MINIMUM_CURVE_LENGTH_METERS = 15.0
     private const val MAXIMUM_CURVE_SPAN_METERS = 250.0
@@ -61,13 +62,15 @@ object CurveDetector {
         headings.zipWithNext().forEachIndexed { index, (from, to) ->
             val delta = GeometryMath.signedHeadingDeltaDegrees(from, to)
             val absoluteDelta = kotlin.math.abs(delta)
+            val isNumericallyZero = absoluteDelta <= NUMERICAL_ZERO_EPSILON_DEGREES
             val sign = when {
+                isNumericallyZero -> 0
                 delta < 0.0 -> -1
                 delta > 0.0 -> 1
                 else -> 0
             }
             if (absoluteDelta < HEADING_NOISE_FLOOR_DEGREES) {
-                if (groupStartIndex != null && delta != 0.0 && sign == groupSign) {
+                if (groupStartIndex != null && sign != 0 && sign == groupSign) {
                     groupTurnDegrees += delta
                     groupMaximumStepDegrees = maxOf(groupMaximumStepDegrees, absoluteDelta)
                     lastEvidenceSampleIndex = index + 2
@@ -75,11 +78,11 @@ object CurveDetector {
                 } else if (groupStartIndex != null) {
                     neutralSamples += 1
                     if (neutralSamples > MAX_NEUTRAL_SAMPLES) finishGroup(index + 1)
-                } else if (groupStartIndex == null && delta != 0.0 && pendingStartIndex == null) {
+                } else if (groupStartIndex == null && sign != 0 && pendingStartIndex == null) {
                     pendingStartIndex = index + 1
                     pendingSign = sign
                     pendingTurnDegrees = delta
-                } else if (groupStartIndex == null && delta != 0.0 && sign == pendingSign) {
+                } else if (groupStartIndex == null && sign != 0 && sign == pendingSign) {
                     pendingTurnDegrees += delta
                     if (kotlin.math.abs(pendingTurnDegrees) >= HEADING_NOISE_FLOOR_DEGREES) {
                         groupStartIndex = pendingStartIndex

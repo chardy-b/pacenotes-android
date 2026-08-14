@@ -125,11 +125,27 @@ class CurveDetectorTest {
             ) to 40.0,
         )
 
-    private fun actualSignedHeadingDelta(route: NormalizedRoute): Double {
+    private fun actualSignedHeadingDeltas(route: NormalizedRoute): List<Double> {
         val points = route.samples.map { it.point }
-        val firstHeading = GeometryMath.initialHeadingDegrees(points[0], points[1])
-        val secondHeading = GeometryMath.initialHeadingDegrees(points[1], points[2])
-        return GeometryMath.signedHeadingDeltaDegrees(firstHeading, secondHeading)
+        val headings = points.zipWithNext { from, to ->
+            GeometryMath.initialHeadingDegrees(from, to)
+        }
+        return headings.zipWithNext { from, to ->
+            GeometryMath.signedHeadingDeltaDegrees(from, to)
+        }
+    }
+
+    private fun actualSignedHeadingDelta(route: NormalizedRoute): Double =
+        actualSignedHeadingDeltas(route).single()
+
+    @Test
+    fun numericalZeroResidueDoesNotExtendSharpCurveEndpoint() {
+        val deltas = actualSignedHeadingDeltas(sharpFixture)
+        val residues = deltas.drop(1)
+
+        assertTrue(residues.all { it != 0.0 })
+        assertTrue(residues.all { kotlin.math.abs(it) <= 1e-8 })
+        assertEquals(53.0, CurveDetector.detect(sharpFixture).single().endDistanceMeters)
     }
 
     @Test
