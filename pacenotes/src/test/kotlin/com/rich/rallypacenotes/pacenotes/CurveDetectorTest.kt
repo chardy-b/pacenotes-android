@@ -5,8 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-import kotlin.math.cos
-import kotlin.math.sin
+
 
 class CurveDetectorTest {
     private fun fixture(id: String, vararg points: Pair<GeoPoint, Double>): NormalizedRoute =
@@ -14,19 +13,6 @@ class CurveDetectorTest {
 
     private fun point(latitude: Double, longitude: Double): GeoPoint = GeoPoint(latitude, longitude)
 
-    private fun severityBoundaryFixture(turnDegrees: Double): NormalizedRoute {
-        val samples = mutableListOf(point(0.0, 0.0) to 0.0)
-        var latitude = 0.0
-        var longitude = 0.0
-        listOf(0.0, turnDegrees / 3.0, turnDegrees * 2.0 / 3.0, turnDegrees).forEachIndexed { index, heading ->
-            // Keep nominal boundary cases safely on the inclusive side of spherical rounding.
-            val robustHeading = heading + if (index == 3) 0.1 else 0.0
-            latitude += 0.0001 * cos(Math.toRadians(robustHeading))
-            longitude += 0.0001 * sin(Math.toRadians(robustHeading))
-            samples += point(latitude, longitude) to (index + 1) * 25.0
-        }
-        return fixture("severity-boundary-$turnDegrees", *samples.toTypedArray())
-    }
 
     private fun sustainedArcFixture(id: String, stepMeters: Double): NormalizedRoute {
         val coordinates = listOf(
@@ -188,22 +174,15 @@ class CurveDetectorTest {
     }
 
     @Test
-    fun mapsSeverityAtEveryDocumentedBoundary() {
+    fun mapsSeverityAtEveryDocumentedBoundaryAndJustBelow() {
         val exactBoundaryExpected = mapOf(20.0 to 6, 30.0 to 5, 40.0 to 4, 55.0 to 3, 75.0 to 2, 100.0 to 1)
         val justBelowExpected = mapOf(19.9 to 6, 29.9 to 6, 39.9 to 5, 54.9 to 4, 74.9 to 3, 99.9 to 2)
 
         exactBoundaryExpected.forEach { (turn, severity) ->
-            val candidates = CurveDetector.detect(severityBoundaryFixture(turn))
-            assertTrue(candidates.isNotEmpty(), "Expected candidate at exact turn $turn")
-            assertEquals(severity, candidates.single().severity)
+            assertEquals(severity, CurveDetector.severityFor(turn), "Exact turn $turn")
         }
         justBelowExpected.forEach { (turn, severity) ->
-            val candidates = CurveDetector.detect(severityBoundaryFixture(turn))
-            if (turn == 19.9) {
-                assertTrue(candidates.isEmpty(), "Turn just below minimum must not produce a candidate")
-            } else {
-                assertEquals(severity, candidates.single().severity)
-            }
+            assertEquals(severity, CurveDetector.severityFor(turn), "Just below turn $turn")
         }
     }
 

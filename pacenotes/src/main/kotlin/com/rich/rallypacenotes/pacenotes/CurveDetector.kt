@@ -66,7 +66,7 @@ object CurveDetector {
         return candidates
     }
 
-    private fun severityFor(absoluteTurnDegrees: Double): Int = when {
+    internal fun severityFor(absoluteTurnDegrees: Double): Int = when {
         absoluteTurnDegrees >= 100.0 -> 1
         absoluteTurnDegrees >= 75.0 -> 2
         absoluteTurnDegrees >= 55.0 -> 3
