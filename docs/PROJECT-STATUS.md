@@ -20,7 +20,7 @@
 - [x] First provider-neutral TDD slice: `GeoPoint` and immutable `RouteGeometry` invariants, including defensive input-list copying; Luna RED→GREEN evidence and Sol re-review passed.
 - [x] Provider-neutral route state slice: validated `RouteRevision` and `MatchedRoutePosition`; explicit navigation statuses/progress invariants; and deterministic, caller-independent pacenote event IDs. Focused RED→GREEN tests and full JVM/debug-APK verification passed.
 - [x] Pure `pacenotes` geometry foundation: stable spherical distance, initial heading, wrap-safe signed heading deltas, and typed metre-spaced route normalization with conservative discontinuity suppression. Focused tests and full relevant Gradle verification passed.
-- [x] WIL-10 conservative curve classifier implementation and remote verification: pure app-owned normalized geometry candidate detection with synthetic fixtures for straight, gentle/sharp, S-bend, noise, junction-like, and roundabout-like geometry; span boundaries and exact severity mapping are covered. At exact head `7e75840844cb7223355db313f30fc6f8c7c3cc6c`, GitHub Actions run `31766037397` completed successfully: `Build and unit tests` completed/success, including the debug APK build and app/core-model/pacenotes unit tests. `API 35 instrumentation tests` completed/skipped because this classifier ticket is not device-specific and manual dispatch was not requested. Local Android SDK remains unavailable; this is remote CI evidence, not physical-device instrumentation evidence.
+- [ ] WIL-10 conservative curve classifier implementation and static-review candidate: pure app-owned normalized geometry candidate detection with synthetic fixtures for straight, gentle/sharp, S-bend, noise, junction-like, and roundabout-like geometry; span boundaries and exact severity mapping are covered. The rebased candidate has not run authoritative baseline CI on its final exact head; completion and unblocking await that fresh CI result. Local Android SDK remains unavailable, and no physical-device or instrumentation validation is claimed.
 
 ## Not started
 
@@ -38,7 +38,7 @@
 
 **P0-06: Add the stateful GPX location matcher and route-revision handling.**
 
-P0-06 is now unblocked by the successful remote WIL-10 verification recorded above. Local Android SDK access remains unavailable, and no physical-device or instrumentation validation is claimed.
+P0-06 remains blocked pending authoritative baseline CI for the final exact WIL-10 head. Local Android SDK access remains unavailable, and no physical-device or instrumentation validation is claimed.
 
 Carry forward the classifier contract: geometry-only candidate detection, suppression of candidates over 250 m or containing any step over 60°, and no claims of topology/junction recognition, GPS, map/provider data, speed, hazards, phrases, or event IDs. Direct regression coverage distinguishes an accepted exact 60° step from a rejected step greater than 60°.
 
