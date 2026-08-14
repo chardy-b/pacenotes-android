@@ -44,9 +44,8 @@ class CurveDetectorTest {
         point(0.0, 0.0002) to 22.0,
         point(0.0002, 0.0004) to 53.0,
         point(0.0004, 0.0004) to 75.0,
-        point(0.0002, 0.0006) to 106.0,
-        point(0.0, 0.0008) to 137.0,
-        point(0.0, 0.0010) to 159.0,
+        point(0.0006, 0.0006) to 106.0,
+        point(0.0006, 0.0008) to 128.0,
     )
 
     private val shortZigZagNoiseFixture = fixture(
@@ -104,8 +103,8 @@ class CurveDetectorTest {
         assertEquals(22.0, sBend[0].startDistanceMeters)
         assertEquals(75.0, sBend[0].endDistanceMeters)
         assertEquals(75.0, sBend[1].startDistanceMeters)
-        assertEquals(137.0, sBend[1].endDistanceMeters)
-        assertEquals(listOf(4, 4), sBend.map { it.severity })
+        assertEquals(128.0, sBend[1].endDistanceMeters)
+        assertEquals(listOf(2, 2), sBend.map { it.severity })
         assertEquals(emptyList(), CurveDetector.detect(shortZigZagNoiseFixture))
         assertEquals(emptyList(), CurveDetector.detect(junctionLikeFixture))
         assertEquals(emptyList(), CurveDetector.detect(roundaboutLikeFixture))
