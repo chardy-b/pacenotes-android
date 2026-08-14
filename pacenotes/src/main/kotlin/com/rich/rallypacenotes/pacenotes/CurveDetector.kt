@@ -2,6 +2,7 @@ package com.rich.rallypacenotes.pacenotes
 
 object CurveDetector {
     private const val HEADING_NOISE_FLOOR_DEGREES = 3.0
+    private const val MAXIMUM_ABRUPT_STEP_DEGREES = 60.0
     private const val MINIMUM_ACCUMULATED_TURN_DEGREES = 20.0
     private const val MINIMUM_CURVE_LENGTH_METERS = 15.0
     private const val MAXIMUM_CURVE_SPAN_METERS = 250.0
@@ -14,6 +15,7 @@ object CurveDetector {
         var groupStartIndex: Int? = null
         var groupTurnDegrees = 0.0
         var groupSign = 0
+        var groupMaximumStepDegrees = 0.0
 
         fun finishGroup(endSampleIndex: Int) {
             val startIndex = groupStartIndex ?: return
@@ -23,7 +25,8 @@ object CurveDetector {
             if (
                 kotlin.math.abs(groupTurnDegrees) >= MINIMUM_ACCUMULATED_TURN_DEGREES &&
                 spanMeters >= MINIMUM_CURVE_LENGTH_METERS &&
-                spanMeters <= MAXIMUM_CURVE_SPAN_METERS
+                spanMeters <= MAXIMUM_CURVE_SPAN_METERS &&
+                groupMaximumStepDegrees <= MAXIMUM_ABRUPT_STEP_DEGREES
             ) {
                 candidates += CurveCandidate(
                     direction = if (groupTurnDegrees < 0.0) CurveDirection.LEFT else CurveDirection.RIGHT,
@@ -36,6 +39,7 @@ object CurveDetector {
             groupStartIndex = null
             groupTurnDegrees = 0.0
             groupSign = 0
+            groupMaximumStepDegrees = 0.0
         }
 
         headings.zipWithNext().forEachIndexed { index, (from, to) ->
@@ -48,12 +52,14 @@ object CurveDetector {
                 groupStartIndex = index + 1
                 groupSign = sign
                 groupTurnDegrees = delta
+                groupMaximumStepDegrees = kotlin.math.abs(delta)
             } else {
                 if (groupStartIndex == null) {
                     groupStartIndex = index + 1
                     groupSign = sign
                 }
                 groupTurnDegrees += delta
+                groupMaximumStepDegrees = maxOf(groupMaximumStepDegrees, kotlin.math.abs(delta))
             }
         }
         finishGroup(route.samples.lastIndex)

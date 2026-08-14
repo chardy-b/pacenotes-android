@@ -14,3 +14,9 @@ Geometry patterns that are short, noisy, discontinuous, ambiguous, or suggestive
 of a junction/roundabout are conservatively suppressible. Geometry alone does
 not identify a real road junction or roundabout. Actual maneuver proximity and
 navigation-adapter maneuver data remain deferred.
+
+Within each same-direction candidate, a single heading step greater than
+60 degrees is treated as abrupt geometry and suppresses the candidate. This
+conservative geometry-only guard retains the corpus's ordinary gentle and
+sharp multi-sample curves while avoiding classification of the right-angle
+junction and roundabout-like fixtures; it does not identify actual topology.

@@ -5,12 +5,26 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import kotlin.math.cos
+import kotlin.math.sin
 
 class CurveDetectorTest {
     private fun fixture(id: String, vararg points: Pair<GeoPoint, Double>): NormalizedRoute =
         NormalizedRoute(id, points.map { (point, distance) -> NormalizedRouteSample(point, distance) })
 
     private fun point(latitude: Double, longitude: Double): GeoPoint = GeoPoint(latitude, longitude)
+
+    private fun severityBoundaryFixture(turnDegrees: Double): NormalizedRoute {
+        val samples = mutableListOf(point(0.0, 0.0) to 0.0)
+        var latitude = 0.0
+        var longitude = 0.0
+        listOf(0.0, turnDegrees / 3.0, turnDegrees * 2.0 / 3.0, turnDegrees).forEachIndexed { index, heading ->
+            latitude += 0.0001 * cos(Math.toRadians(heading))
+            longitude += 0.0001 * sin(Math.toRadians(heading))
+            samples += point(latitude, longitude) to (index + 1) * 25.0
+        }
+        return fixture("severity-boundary-$turnDegrees", *samples.toTypedArray())
+    }
 
     private fun sustainedArcFixture(id: String, stepMeters: Double): NormalizedRoute {
         val coordinates = listOf(
@@ -169,6 +183,15 @@ class CurveDetectorTest {
         assertEquals(CurveDirection.LEFT, candidates.single().direction)
         assertTrue(candidates.single().signedTurnDegrees < 0.0)
         assertEquals(emptyList(), CurveDetector.detect(straightFixture))
+    }
+
+    @Test
+    fun mapsSeverityAtEveryDocumentedBoundary() {
+        val expected = mapOf(20.1 to 6, 30.1 to 5, 40.1 to 4, 55.1 to 3, 75.1 to 2, 100.1 to 1)
+
+        expected.forEach { (turn, severity) ->
+            assertEquals(severity, CurveDetector.detect(severityBoundaryFixture(turn)).single().severity)
+        }
     }
 
     @Test
