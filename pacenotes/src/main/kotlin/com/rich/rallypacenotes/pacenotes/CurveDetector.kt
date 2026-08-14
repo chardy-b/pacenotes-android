@@ -2,6 +2,7 @@ package com.rich.rallypacenotes.pacenotes
 
 object CurveDetector {
     private const val HEADING_NOISE_FLOOR_DEGREES = 3.0
+    private const val MAX_NEUTRAL_SAMPLES = 2
     private const val MAXIMUM_ABRUPT_STEP_DEGREES = 60.0
     private const val MINIMUM_ACCUMULATED_TURN_DEGREES = 20.0
     private const val MINIMUM_CURVE_LENGTH_METERS = 15.0
@@ -16,6 +17,7 @@ object CurveDetector {
         var groupTurnDegrees = 0.0
         var groupSign = 0
         var groupMaximumStepDegrees = 0.0
+        var neutralSamples = 0
 
         fun finishGroup(endSampleIndex: Int) {
             val startIndex = groupStartIndex ?: return
@@ -40,26 +42,37 @@ object CurveDetector {
             groupTurnDegrees = 0.0
             groupSign = 0
             groupMaximumStepDegrees = 0.0
+            neutralSamples = 0
         }
 
         headings.zipWithNext().forEachIndexed { index, (from, to) ->
             val delta = GeometryMath.signedHeadingDeltaDegrees(from, to)
+            val absoluteDelta = kotlin.math.abs(delta)
             val sign = if (delta < 0.0) -1 else 1
-            if (kotlin.math.abs(delta) < HEADING_NOISE_FLOOR_DEGREES) {
-                finishGroup(index + 1)
+            if (absoluteDelta < HEADING_NOISE_FLOOR_DEGREES) {
+                if (groupStartIndex != null && delta != 0.0 && sign == groupSign) {
+                    groupTurnDegrees += delta
+                    groupMaximumStepDegrees = maxOf(groupMaximumStepDegrees, absoluteDelta)
+                    neutralSamples = 0
+                } else if (groupStartIndex != null) {
+                    neutralSamples += 1
+                    if (neutralSamples > MAX_NEUTRAL_SAMPLES) finishGroup(index + 1)
+                }
             } else if (groupStartIndex != null && sign != groupSign) {
                 finishGroup(index + 1)
                 groupStartIndex = index + 1
                 groupSign = sign
                 groupTurnDegrees = delta
-                groupMaximumStepDegrees = kotlin.math.abs(delta)
+                groupMaximumStepDegrees = absoluteDelta
+                neutralSamples = 0
             } else {
                 if (groupStartIndex == null) {
                     groupStartIndex = index + 1
                     groupSign = sign
                 }
                 groupTurnDegrees += delta
-                groupMaximumStepDegrees = maxOf(groupMaximumStepDegrees, kotlin.math.abs(delta))
+                groupMaximumStepDegrees = maxOf(groupMaximumStepDegrees, absoluteDelta)
+                neutralSamples = 0
             }
         }
         finishGroup(route.samples.lastIndex)

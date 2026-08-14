@@ -20,3 +20,12 @@ Within each same-direction candidate, a single heading step greater than
 conservative geometry-only guard retains the corpus's ordinary gentle and
 sharp multi-sample curves while avoiding classification of the right-angle
 junction and roundabout-like fixtures; it does not identify actual topology.
+
+Heading changes below the 3-degree noise floor are not independently material:
+when an active group has the same sign they are accumulated as sustained
+sub-noise evidence, so dense sampling does not erase a smooth turn. Opposite-
+sign or zero sub-floor samples are neutral evidence, not turn evidence; at
+most two consecutive neutral samples are tolerated. A third ends the active
+group. Thus isolated or oscillating noise remains fail-closed, while a bounded
+neutral run cannot merge separated turns. Sub-floor samples do not start a new
+group by themselves.

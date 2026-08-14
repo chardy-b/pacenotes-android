@@ -13,6 +13,21 @@ class CurveDetectorTest {
 
     private fun point(latitude: Double, longitude: Double): GeoPoint = GeoPoint(latitude, longitude)
 
+    private fun headingSequenceFixture(id: String, headingChanges: List<Double>): NormalizedRoute {
+        var latitude = 0.0
+        var longitude = 0.0
+        var heading = 90.0
+        val points = mutableListOf(point(latitude, longitude) to 0.0)
+        headingChanges.forEachIndexed { index, change ->
+            heading += change
+            val radians = Math.toRadians(heading)
+            latitude += kotlin.math.cos(radians) * 0.0002
+            longitude += kotlin.math.sin(radians) * 0.0002
+            points += point(latitude, longitude) to (index + 1) * 20.0
+        }
+        return fixture(id, *points.toTypedArray())
+    }
+
 
     private fun sustainedArcFixture(id: String, stepMeters: Double): NormalizedRoute {
         val coordinates = listOf(
@@ -114,6 +129,27 @@ class CurveDetectorTest {
     fun acceptsExactSixtyDegreeHeadingStepButSuppressesGreaterStep() {
         assertEquals(1, CurveDetector.detect(headingStepFixture("exact-60-degree-step-v1", 30.0)).size)
         assertEquals(0, CurveDetector.detect(headingStepFixture("greater-than-60-degree-step-v1", 29.0)).size)
+    }
+
+    @Test
+    fun accumulatesSustainedSameDirectionSubNoiseHeadingChanges() {
+        val denseSmoothCurve = headingSequenceFixture("dense-smooth-sub-noise-v1", List(9) { 2.5 })
+
+        val candidates = CurveDetector.detect(denseSmoothCurve)
+
+        assertEquals(1, candidates.size)
+        assertEquals(CurveDirection.RIGHT, candidates.single().direction)
+        assertTrue(candidates.single().signedTurnDegrees >= 20.0)
+    }
+
+    @Test
+    fun boundedNeutralRunDoesNotBridgeSubThresholdTurns() {
+        val separatedSubNoiseTurns = headingSequenceFixture(
+            "separated-sub-noise-turns-v1",
+            List(6) { 2.5 } + List(3) { 0.0 } + List(6) { 2.5 },
+        )
+
+        assertEquals(emptyList(), CurveDetector.detect(separatedSubNoiseTurns))
     }
 
     @Test
