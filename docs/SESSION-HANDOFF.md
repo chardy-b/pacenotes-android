@@ -14,7 +14,7 @@ You are continuing **Rally Pacenotes Android**, a credential-free Android MVP th
 3. Read docs/DECISIONS.md before changing scope or architecture.
 4. Read docs/plans/2026-08-01-p0-03-route-progress-pacenote-domain.md for the completed model boundary.
 5. Check git status before touching files.
-6. Plan and execute the first unblocked P0 item: P0-04 geometry normalization and distance/heading primitives.
+6. After WIL-10 final verification is accepted, execute P0-06 stateful GPX location matcher and route-revision handling; it is not currently unblocked.
 ```
 
 ## Current state
@@ -24,8 +24,11 @@ You are continuing **Rally Pacenotes Android**, a credential-free Android MVP th
 - Android scaffold is verified locally; `:app:assembleDebug` succeeds.
 - `core-model` is pure Kotlin/JVM and contains validated `GeoPoint`, immutable `RouteGeometry`, `RouteRevision`, `MatchedRoutePosition`, `NavigationProgress`/`NavigationStatus`, and deterministic `Pacenote` event IDs.
 - `pacenotes` is a pure Kotlin/JVM module depending only on `core-model`; it contains stable spherical distance/heading primitives and fixed-distance route normalization with typed discontinuity suppression.
+- WIL-10 curve classification is complete: it consumes only app-owned normalized geometry and conservatively detects candidates using synthetic fixtures. Candidates longer than 250 m, or with any per-step heading change over 60°, are suppressed.
+- WIL-10 does not recognize real topology or junctions and does not use GPS matching, map/provider data, speed, hazards, phrases, or event IDs. Junction-like and roundabout-like fixtures are geometry-shape evidence only.
+- WIL-10 `:pacenotes:test` passed on 2026-08-14. Local `:app:assembleDebug` failed because the Android SDK location is unavailable; no GitHub Actions workflow or fallback was found in this checkout. Final verification remains blocked and WIL-10 is not fully done.
 - Last P0-04 focused verification: `./gradlew --no-daemon -Dorg.gradle.jvmargs='-Xmx512m -Dfile.encoding=UTF-8' -Dorg.gradle.workers.max=1 :pacenotes:test --tests '*RouteNormalizerTest*' --rerun-tasks` succeeded on 2026-08-01.
-- The next coding item is P0-05 conservative curve detection/classification; write its test strategy and threshold documentation first.
+- P0-06 stateful GPX location matcher and route-revision handling remains blocked until WIL-10 final verification is accepted; it is not yet unblocked. A minor deferred coverage refinement remains: add direct regression coverage distinguishing an accepted exact 60° step from a rejected step greater than 60°.
 
 ## Security rules
 
