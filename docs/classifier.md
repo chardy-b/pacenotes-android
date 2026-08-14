@@ -16,7 +16,10 @@ not identify a real road junction or roundabout. Actual maneuver proximity and
 navigation-adapter maneuver data remain deferred.
 
 Within each same-direction candidate, a single heading step greater than
-60 degrees is treated as abrupt geometry and suppresses the candidate. This
+60 degrees is treated as abrupt geometry and suppresses the candidate. The
+comparison allows a 1e-9-degree tolerance for floating-point noise in the
+spherical calculation, so an exact mathematical 60-degree step remains
+inclusive while a 61-degree step remains suppressed. This
 conservative geometry-only guard retains the corpus's ordinary gentle and
 sharp multi-sample curves while avoiding classification of the right-angle
 junction and roundabout-like fixtures; it does not identify actual topology.
@@ -31,3 +34,7 @@ deltas are neutral evidence, not reversal evidence; at most two consecutive
 neutral samples are tolerated, and a third ends the active group. A material
 opposite-sign delta ends the group and starts a separate group. A bounded
 neutral run therefore cannot merge separated turns.
+
+Candidate end distance is the last sample that contributed accepted turn
+evidence. Trailing neutral samples used to finish a group do not extend its
+reported curve span.

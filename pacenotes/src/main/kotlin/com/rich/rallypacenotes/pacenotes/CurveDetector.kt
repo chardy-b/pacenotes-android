@@ -4,6 +4,8 @@ object CurveDetector {
     private const val HEADING_NOISE_FLOOR_DEGREES = 3.0
     private const val MAX_NEUTRAL_SAMPLES = 2
     private const val MAXIMUM_ABRUPT_STEP_DEGREES = 60.0
+    // Spherical heading calculations can overshoot exact boundaries by tiny FP noise.
+    private const val ANGULAR_COMPARISON_EPSILON_DEGREES = 1e-9
     private const val MINIMUM_ACCUMULATED_TURN_DEGREES = 20.0
     private const val MINIMUM_CURVE_LENGTH_METERS = 15.0
     private const val MAXIMUM_CURVE_SPAN_METERS = 250.0
@@ -17,6 +19,7 @@ object CurveDetector {
         var groupTurnDegrees = 0.0
         var groupSign = 0
         var groupMaximumStepDegrees = 0.0
+        var lastEvidenceSampleIndex: Int? = null
         var neutralSamples = 0
         var pendingStartIndex: Int? = null
         var pendingTurnDegrees = 0.0
@@ -25,13 +28,13 @@ object CurveDetector {
         fun finishGroup(endSampleIndex: Int) {
             val startIndex = groupStartIndex ?: return
             val startDistance = route.samples[startIndex].routeDistanceMeters
-            val endDistance = route.samples[endSampleIndex].routeDistanceMeters
+            val endDistance = route.samples[lastEvidenceSampleIndex ?: endSampleIndex].routeDistanceMeters
             val spanMeters = endDistance - startDistance
             if (
                 kotlin.math.abs(groupTurnDegrees) >= MINIMUM_ACCUMULATED_TURN_DEGREES &&
                 spanMeters >= MINIMUM_CURVE_LENGTH_METERS &&
                 spanMeters <= MAXIMUM_CURVE_SPAN_METERS &&
-                groupMaximumStepDegrees <= MAXIMUM_ABRUPT_STEP_DEGREES
+                groupMaximumStepDegrees <= MAXIMUM_ABRUPT_STEP_DEGREES + ANGULAR_COMPARISON_EPSILON_DEGREES
             ) {
                 candidates += CurveCandidate(
                     direction = if (groupTurnDegrees < 0.0) CurveDirection.LEFT else CurveDirection.RIGHT,
@@ -45,6 +48,7 @@ object CurveDetector {
             groupTurnDegrees = 0.0
             groupSign = 0
             groupMaximumStepDegrees = 0.0
+            lastEvidenceSampleIndex = null
             neutralSamples = 0
         }
 
@@ -66,6 +70,7 @@ object CurveDetector {
                 if (groupStartIndex != null && delta != 0.0 && sign == groupSign) {
                     groupTurnDegrees += delta
                     groupMaximumStepDegrees = maxOf(groupMaximumStepDegrees, absoluteDelta)
+                    lastEvidenceSampleIndex = index + 1
                     neutralSamples = 0
                 } else if (groupStartIndex != null) {
                     neutralSamples += 1
@@ -81,6 +86,7 @@ object CurveDetector {
                         groupSign = pendingSign
                         groupTurnDegrees = pendingTurnDegrees
                         groupMaximumStepDegrees = absoluteDelta
+                        lastEvidenceSampleIndex = index + 1
                         neutralSamples = 0
                         clearPending()
                     }
@@ -93,6 +99,7 @@ object CurveDetector {
                 groupSign = sign
                 groupTurnDegrees = delta
                 groupMaximumStepDegrees = absoluteDelta
+                lastEvidenceSampleIndex = index + 1
                 neutralSamples = 0
             } else {
                 if (groupStartIndex == null) {
@@ -102,6 +109,7 @@ object CurveDetector {
                 }
                 groupTurnDegrees += delta
                 groupMaximumStepDegrees = maxOf(groupMaximumStepDegrees, absoluteDelta)
+                lastEvidenceSampleIndex = index + 1
                 neutralSamples = 0
             }
         }

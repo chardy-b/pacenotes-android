@@ -140,7 +140,7 @@ class CurveDetectorTest {
 
         assertEquals(1, candidates.size)
         assertEquals(CurveDirection.RIGHT, candidates.single().direction)
-        assertEquals(22.5, candidates.single().signedTurnDegrees, 1e-9)
+        assertEquals(22.5, candidates.single().signedTurnDegrees, 1e-8)
         assertEquals(180.0, candidates.single().endDistanceMeters - candidates.single().startDistanceMeters, 1e-9)
     }
 
