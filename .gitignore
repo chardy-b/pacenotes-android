@@ -33,3 +33,6 @@ local-maps/
 *.mbtiles
 *.pmtiles
 *.osm.pbf
+
+# Kotlin compiler workspace
+.kotlin/
