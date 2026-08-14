@@ -25,8 +25,14 @@ Thumbs.db
 # Generated diagnostics
 *.log
 
+# Local controller execution state
+.hermes/execution/
+
 # Generated local map packages and source extracts (retain provenance manifests only)
 local-maps/
 *.mbtiles
 *.pmtiles
 *.osm.pbf
+
+# Kotlin compiler workspace
+.kotlin/
