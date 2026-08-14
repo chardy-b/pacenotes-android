@@ -40,7 +40,7 @@
 
 P0-06 is now unblocked by the successful remote WIL-10 verification recorded above. Local Android SDK access remains unavailable, and no physical-device or instrumentation validation is claimed.
 
-Carry forward the classifier contract: geometry-only candidate detection, suppression of candidates over 250 m or containing any step over 60°, and no claims of topology/junction recognition, GPS, map/provider data, speed, hazards, phrases, or event IDs. Add the deferred direct exact-60° versus greater-than-60° boundary regression when the next test slice is appropriate.
+Carry forward the classifier contract: geometry-only candidate detection, suppression of candidates over 250 m or containing any step over 60°, and no claims of topology/junction recognition, GPS, map/provider data, speed, hazards, phrases, or event IDs. Direct regression coverage distinguishes an accepted exact 60° step from a rejected step greater than 60°.
 
 Do not add Mapbox, public OSM tiles, OSRM demo endpoints, Google Play Services, `INTERNET` permission, credentials, or secret configuration to V1.
 

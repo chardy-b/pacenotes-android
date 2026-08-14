@@ -99,6 +99,23 @@ class CurveDetectorTest {
         point(0.0, 0.0) to 124.0,
     )
 
+    private fun headingStepFixture(id: String, secondHeadingDegrees: Double): NormalizedRoute =
+        fixture(
+            id,
+            point(0.0, 0.0) to 0.0,
+            point(0.0, 0.0002) to 20.0,
+            point(
+                latitude = kotlin.math.cos(Math.toRadians(secondHeadingDegrees)) * 0.0002,
+                longitude = 0.0002 + kotlin.math.sin(Math.toRadians(secondHeadingDegrees)) * 0.0002,
+            ) to 40.0,
+        )
+
+    @Test
+    fun acceptsExactSixtyDegreeHeadingStepButSuppressesGreaterStep() {
+        assertEquals(1, CurveDetector.detect(headingStepFixture("exact-60-degree-step-v1", 30.0)).size)
+        assertEquals(0, CurveDetector.detect(headingStepFixture("greater-than-60-degree-step-v1", 29.0)).size)
+    }
+
     @Test
     fun syntheticCorpusDocumentsConservativeShapeBoundaries() {
         assertEquals(emptyList(), CurveDetector.detect(straightFixture))
