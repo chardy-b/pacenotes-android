@@ -11,7 +11,7 @@ is suppressed.
 ## Git state
 
 - Base: `3043546c6045f63f05f7ad58af5c11a306ad38a5`
-- Final implementation commit: `fdef6403ecfff551ca4074bcd4b7068c9d693225`
+- Final implementation/report HEAD: `5f600765abb5c85dc37372e8404dc2ecb5f6ac62`
 - Branch: `teo/wil-10-p0-05-curve-classification`
 - Branch is locally ahead of the remote branch and has not been pushed.
 - Rebase command: `git rebase origin/main` — completed successfully.
