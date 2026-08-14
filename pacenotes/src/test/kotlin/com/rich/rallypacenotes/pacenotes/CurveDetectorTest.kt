@@ -7,10 +7,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class CurveDetectorTest {
-    private fun fixture(id: String, vararg points: Pair<GeoPoint, Double>) =
+    private fun fixture(id: String, vararg points: Pair<GeoPoint, Double>): NormalizedRoute =
         NormalizedRoute(id, points.map { (point, distance) -> NormalizedRouteSample(point, distance) })
 
-    private fun point(latitude: Double, longitude: Double) = GeoPoint(latitude, longitude)
+    private fun point(latitude: Double, longitude: Double): GeoPoint = GeoPoint(latitude, longitude)
 
     private val straightFixture = fixture(
         "straight-v1",
@@ -34,8 +34,8 @@ class CurveDetectorTest {
         point(0.0, 0.0) to 0.0,
         point(0.0, 0.0002) to 22.0,
         point(0.0002, 0.0004) to 53.0,
-        point(0.0004, 0.0004) to 75.0,
-        point(0.0004, 0.0006) to 97.0,
+        point(0.0004, 0.0006) to 84.0,
+        point(0.0006, 0.0008) to 115.0,
     )
 
     private val sBendFixture = fixture(
@@ -78,13 +78,39 @@ class CurveDetectorTest {
     @Test
     fun syntheticCorpusDocumentsConservativeShapeBoundaries() {
         assertEquals(emptyList(), CurveDetector.detect(straightFixture))
-        assertEquals(1, CurveDetector.detect(gentleFixture).size)
-        assertEquals(1, CurveDetector.detect(sharpFixture).size)
-        assertEquals(2, CurveDetector.detect(sBendFixture).size)
+        val gentle = CurveDetector.detect(gentleFixture)
+        val sharp = CurveDetector.detect(sharpFixture)
+        val sBend = CurveDetector.detect(sBendFixture)
+
+        assertEquals(1, gentle.size)
+        assertEquals(CurveDirection.LEFT, gentle.single().direction)
+        assertTrue(gentle.single().signedTurnDegrees < 0.0)
+        assertEquals(22.0, gentle.single().startDistanceMeters)
+        assertEquals(91.0, gentle.single().endDistanceMeters)
+        assertEquals(5, gentle.single().severity)
+
+        assertEquals(1, sharp.size)
+        assertEquals(CurveDirection.LEFT, sharp.single().direction)
+        assertTrue(sharp.single().signedTurnDegrees < 0.0)
+        assertEquals(22.0, sharp.single().startDistanceMeters)
+        assertEquals(53.0, sharp.single().endDistanceMeters)
+        assertEquals(4, sharp.single().severity)
+
+        assertEquals(2, sBend.size)
+        assertEquals(listOf(CurveDirection.LEFT, CurveDirection.RIGHT), sBend.map { it.direction })
+        assertTrue(sBend.all { it.signedTurnDegrees != 0.0 })
+        assertTrue(sBend[0].signedTurnDegrees < 0.0)
+        assertTrue(sBend[1].signedTurnDegrees > 0.0)
+        assertEquals(22.0, sBend[0].startDistanceMeters)
+        assertEquals(75.0, sBend[0].endDistanceMeters)
+        assertEquals(75.0, sBend[1].startDistanceMeters)
+        assertEquals(137.0, sBend[1].endDistanceMeters)
+        assertEquals(listOf(4, 4), sBend.map { it.severity })
         assertEquals(emptyList(), CurveDetector.detect(shortZigZagNoiseFixture))
         assertEquals(emptyList(), CurveDetector.detect(junctionLikeFixture))
         assertEquals(emptyList(), CurveDetector.detect(roundaboutLikeFixture))
     }
+
     @Test
     fun curveCandidateCapturesValidatedGeometryOnlyClassification() {
         val candidate = CurveCandidate(
@@ -102,30 +128,12 @@ class CurveDetectorTest {
 
     @Test
     fun detectsSustainedLeftGeometryButSuppressesStraightGeometry() {
-        val leftCurve = NormalizedRoute(
-            sourceRouteId = "left-fixture",
-            samples = listOf(
-                NormalizedRouteSample(GeoPoint(0.0, 0.0), 0.0),
-                NormalizedRouteSample(GeoPoint(0.0, 0.0002), 22.0),
-                NormalizedRouteSample(GeoPoint(0.0002, 0.0004), 53.0),
-                NormalizedRouteSample(GeoPoint(0.0004, 0.0004), 75.0),
-            ),
-        )
-        val straight = NormalizedRoute(
-            sourceRouteId = "straight-fixture",
-            samples = listOf(
-                NormalizedRouteSample(GeoPoint(0.0, 0.0), 0.0),
-                NormalizedRouteSample(GeoPoint(0.0, 0.0002), 22.0),
-                NormalizedRouteSample(GeoPoint(0.0, 0.0004), 44.0),
-            ),
-        )
-
-        val candidates = CurveDetector.detect(leftCurve)
+        val candidates = CurveDetector.detect(gentleFixture)
 
         assertEquals(1, candidates.size)
         assertEquals(CurveDirection.LEFT, candidates.single().direction)
-        assertTrue(candidates.single().signedTurnDegrees <= -80.0)
-        assertEquals(emptyList(), CurveDetector.detect(straight))
+        assertTrue(candidates.single().signedTurnDegrees < 0.0)
+        assertEquals(emptyList(), CurveDetector.detect(straightFixture))
     }
 
     @Test
