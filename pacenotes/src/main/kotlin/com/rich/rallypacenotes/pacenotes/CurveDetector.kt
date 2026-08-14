@@ -70,7 +70,7 @@ object CurveDetector {
                 if (groupStartIndex != null && delta != 0.0 && sign == groupSign) {
                     groupTurnDegrees += delta
                     groupMaximumStepDegrees = maxOf(groupMaximumStepDegrees, absoluteDelta)
-                    lastEvidenceSampleIndex = index + 1
+                    lastEvidenceSampleIndex = index + 2
                     neutralSamples = 0
                 } else if (groupStartIndex != null) {
                     neutralSamples += 1
@@ -86,7 +86,7 @@ object CurveDetector {
                         groupSign = pendingSign
                         groupTurnDegrees = pendingTurnDegrees
                         groupMaximumStepDegrees = absoluteDelta
-                        lastEvidenceSampleIndex = index + 1
+                        lastEvidenceSampleIndex = index + 2
                         neutralSamples = 0
                         clearPending()
                     }
@@ -99,7 +99,7 @@ object CurveDetector {
                 groupSign = sign
                 groupTurnDegrees = delta
                 groupMaximumStepDegrees = absoluteDelta
-                lastEvidenceSampleIndex = index + 1
+                lastEvidenceSampleIndex = index + 2
                 neutralSamples = 0
             } else {
                 if (groupStartIndex == null) {
@@ -109,7 +109,7 @@ object CurveDetector {
                 }
                 groupTurnDegrees += delta
                 groupMaximumStepDegrees = maxOf(groupMaximumStepDegrees, absoluteDelta)
-                lastEvidenceSampleIndex = index + 1
+                lastEvidenceSampleIndex = index + 2
                 neutralSamples = 0
             }
         }
