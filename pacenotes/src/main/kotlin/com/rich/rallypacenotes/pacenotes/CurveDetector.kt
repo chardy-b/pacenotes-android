@@ -19,10 +19,11 @@ object CurveDetector {
             val startIndex = groupStartIndex ?: return
             val startDistance = route.samples[startIndex].routeDistanceMeters
             val endDistance = route.samples[endSampleIndex].routeDistanceMeters
+            val spanMeters = endDistance - startDistance
             if (
                 kotlin.math.abs(groupTurnDegrees) >= MINIMUM_ACCUMULATED_TURN_DEGREES &&
-                endDistance - startDistance >= MINIMUM_CURVE_LENGTH_METERS &&
-                endDistance - startDistance <= MAXIMUM_CURVE_SPAN_METERS
+                spanMeters >= MINIMUM_CURVE_LENGTH_METERS &&
+                spanMeters <= MAXIMUM_CURVE_SPAN_METERS
             ) {
                 candidates += CurveCandidate(
                     direction = if (groupTurnDegrees < 0.0) CurveDirection.LEFT else CurveDirection.RIGHT,

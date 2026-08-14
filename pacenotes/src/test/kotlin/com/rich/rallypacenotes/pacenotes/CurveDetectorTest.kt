@@ -12,6 +12,26 @@ class CurveDetectorTest {
 
     private fun point(latitude: Double, longitude: Double): GeoPoint = GeoPoint(latitude, longitude)
 
+    private fun sustainedArcFixture(id: String, stepMeters: Double): NormalizedRoute {
+        val coordinates = listOf(
+            0.0000000 to 0.0000000,
+            0.0000000 to 0.0002300,
+            0.0000399 to 0.0004565,
+            0.0001186 to 0.0006726,
+            0.0002336 to 0.0008718,
+            0.0003814 to 0.0010480,
+            0.0005576 to 0.0011959,
+            0.0007568 to 0.0013109,
+            0.0009730 to 0.0013895,
+            0.0011995 to 0.0014295,
+            0.0014295 to 0.0014295,
+            0.0016560 to 0.0013895,
+        )
+        return fixture(id, *coordinates.map { (latitude, longitude) ->
+            point(latitude, longitude) to coordinates.indexOf(latitude to longitude) * stepMeters
+        }.toTypedArray())
+    }
+
     private val straightFixture = fixture(
         "straight-v1",
         point(0.0, 0.0) to 0.0,
@@ -48,24 +68,8 @@ class CurveDetectorTest {
         point(0.0006, 0.0008) to 128.0,
     )
 
-    private val overlongSameDirectionFixture = fixture(
-        "overlong-same-direction-v1",
-        point(0.0000000, 0.0000000) to 0.0,
-        point(0.0000000, 0.0002300) to 23.0,
-        point(0.0000399, 0.0004565) to 46.0,
-        point(0.0001186, 0.0006726) to 69.0,
-        point(0.0002336, 0.0008718) to 92.0,
-        point(0.0003814, 0.0010480) to 115.0,
-        point(0.0005576, 0.0011959) to 138.0,
-        point(0.0007568, 0.0013109) to 161.0,
-        point(0.0009730, 0.0013895) to 184.0,
-        point(0.0011995, 0.0014295) to 207.0,
-        point(0.0014295, 0.0014295) to 230.0,
-        point(0.0016560, 0.0013895) to 253.0,
-        point(0.0018721, 0.0013109) to 276.0,
-        point(0.0020713, 0.0011959) to 299.0,
-        point(0.0022475, 0.0010480) to 322.0,
-    )
+    private val maximumSpanArcFixture = sustainedArcFixture("maximum-span-arc-v1", 25.0)
+    private val overlongSameDirectionFixture = sustainedArcFixture("overlong-same-direction-v1", 26.0)
 
     private val shortZigZagNoiseFixture = fixture(
         "short-zig-zag-noise-v1",
@@ -147,6 +151,14 @@ class CurveDetectorTest {
     @Test
     fun suppressesSameDirectionCandidateBeyond250Meters() {
         assertEquals(emptyList(), CurveDetector.detect(overlongSameDirectionFixture))
+    }
+
+    @Test
+    fun retainsSameDirectionCandidateAtExactly250Meters() {
+        val candidates = CurveDetector.detect(maximumSpanArcFixture)
+
+        assertEquals(1, candidates.size)
+        assertEquals(250.0, candidates.single().endDistanceMeters - candidates.single().startDistanceMeters)
     }
 
     @Test
