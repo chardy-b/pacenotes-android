@@ -21,11 +21,13 @@ conservative geometry-only guard retains the corpus's ordinary gentle and
 sharp multi-sample curves while avoiding classification of the right-angle
 junction and roundabout-like fixtures; it does not identify actual topology.
 
-Heading changes below the 3-degree noise floor are not independently material:
-when an active group has the same sign they are accumulated as sustained
-sub-noise evidence, so dense sampling does not erase a smooth turn. Opposite-
-sign or zero sub-floor samples are neutral evidence, not turn evidence; at
-most two consecutive neutral samples are tolerated. A third ends the active
-group. Thus isolated or oscillating noise remains fail-closed, while a bounded
-neutral run cannot merge separated turns. Sub-floor samples do not start a new
-group by themselves.
+Heading changes below the 3-degree noise floor are not independently material.
+When no group is active, consecutive non-zero, same-sign sub-floor deltas are
+retained as pending evidence; they start a group only when their cumulative
+magnitude reaches 3 degrees, preserving the pending turn and span. Isolated,
+zero, or oscillating sub-floor jitter resets that pending run. Once active,
+same-sign sub-floor deltas continue the group. Opposite-sign or zero sub-floor
+deltas are neutral evidence, not reversal evidence; at most two consecutive
+neutral samples are tolerated, and a third ends the active group. A material
+opposite-sign delta ends the group and starts a separate group. A bounded
+neutral run therefore cannot merge separated turns.

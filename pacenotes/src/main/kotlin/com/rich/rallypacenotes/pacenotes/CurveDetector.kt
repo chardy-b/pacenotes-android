@@ -18,6 +18,9 @@ object CurveDetector {
         var groupSign = 0
         var groupMaximumStepDegrees = 0.0
         var neutralSamples = 0
+        var pendingStartIndex: Int? = null
+        var pendingTurnDegrees = 0.0
+        var pendingSign = 0
 
         fun finishGroup(endSampleIndex: Int) {
             val startIndex = groupStartIndex ?: return
@@ -45,10 +48,20 @@ object CurveDetector {
             neutralSamples = 0
         }
 
+        fun clearPending() {
+            pendingStartIndex = null
+            pendingTurnDegrees = 0.0
+            pendingSign = 0
+        }
+
         headings.zipWithNext().forEachIndexed { index, (from, to) ->
             val delta = GeometryMath.signedHeadingDeltaDegrees(from, to)
             val absoluteDelta = kotlin.math.abs(delta)
-            val sign = if (delta < 0.0) -1 else 1
+            val sign = when {
+                delta < 0.0 -> -1
+                delta > 0.0 -> 1
+                else -> 0
+            }
             if (absoluteDelta < HEADING_NOISE_FLOOR_DEGREES) {
                 if (groupStartIndex != null && delta != 0.0 && sign == groupSign) {
                     groupTurnDegrees += delta
@@ -57,6 +70,22 @@ object CurveDetector {
                 } else if (groupStartIndex != null) {
                     neutralSamples += 1
                     if (neutralSamples > MAX_NEUTRAL_SAMPLES) finishGroup(index + 1)
+                } else if (groupStartIndex == null && delta != 0.0 && pendingStartIndex == null) {
+                    pendingStartIndex = index + 1
+                    pendingSign = sign
+                    pendingTurnDegrees = delta
+                } else if (groupStartIndex == null && delta != 0.0 && sign == pendingSign) {
+                    pendingTurnDegrees += delta
+                    if (kotlin.math.abs(pendingTurnDegrees) >= HEADING_NOISE_FLOOR_DEGREES) {
+                        groupStartIndex = pendingStartIndex
+                        groupSign = pendingSign
+                        groupTurnDegrees = pendingTurnDegrees
+                        groupMaximumStepDegrees = absoluteDelta
+                        neutralSamples = 0
+                        clearPending()
+                    }
+                } else if (groupStartIndex == null) {
+                    clearPending()
                 }
             } else if (groupStartIndex != null && sign != groupSign) {
                 finishGroup(index + 1)
@@ -69,6 +98,7 @@ object CurveDetector {
                 if (groupStartIndex == null) {
                     groupStartIndex = index + 1
                     groupSign = sign
+                    clearPending()
                 }
                 groupTurnDegrees += delta
                 groupMaximumStepDegrees = maxOf(groupMaximumStepDegrees, absoluteDelta)

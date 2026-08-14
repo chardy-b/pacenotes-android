@@ -133,13 +133,15 @@ class CurveDetectorTest {
 
     @Test
     fun accumulatesSustainedSameDirectionSubNoiseHeadingChanges() {
-        val denseSmoothCurve = headingSequenceFixture("dense-smooth-sub-noise-v1", List(9) { 2.5 })
+        // Ten route segments produce nine computed heading deltas: 9 * 2.5 = 22.5°.
+        val denseSmoothCurve = headingSequenceFixture("dense-smooth-sub-noise-v1", List(10) { 2.5 })
 
         val candidates = CurveDetector.detect(denseSmoothCurve)
 
         assertEquals(1, candidates.size)
         assertEquals(CurveDirection.RIGHT, candidates.single().direction)
-        assertTrue(candidates.single().signedTurnDegrees >= 20.0)
+        assertEquals(22.5, candidates.single().signedTurnDegrees, 1e-9)
+        assertEquals(180.0, candidates.single().endDistanceMeters - candidates.single().startDistanceMeters, 1e-9)
     }
 
     @Test
