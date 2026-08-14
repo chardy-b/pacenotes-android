@@ -118,7 +118,7 @@ jobs:
             app_ready=0; for attempt in $(seq 1 30); do if adb shell pidof "$APPLICATION_ID" >/dev/null; then app_ready=1; break; fi; sleep 1; done;
             test "$app_ready" -eq 1;
             adb shell dumpsys activity activities > "$EVIDENCE_DIR/activity-state.txt";
-            grep -Eq 'mResumedActivity.*com\.rich\.rallypacenotes/\.MainActivity' "$EVIDENCE_DIR/activity-state.txt";
+            grep -Eq '(mResumedActivity|topResumedActivity|ResumedActivity).*com\.rich\.rallypacenotes/\.MainActivity' "$EVIDENCE_DIR/activity-state.txt";
             sleep 3;
             capture_png app-launched.png;
             adb shell uiautomator dump /sdcard/app-window.xml >/dev/null;
