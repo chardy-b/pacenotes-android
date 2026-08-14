@@ -125,10 +125,30 @@ class CurveDetectorTest {
             ) to 40.0,
         )
 
+    private fun actualSignedHeadingDelta(route: NormalizedRoute): Double {
+        val points = route.samples.map { it.point }
+        val firstHeading = GeometryMath.initialHeadingDegrees(points[0], points[1])
+        val secondHeading = GeometryMath.initialHeadingDegrees(points[1], points[2])
+        return GeometryMath.signedHeadingDeltaDegrees(firstHeading, secondHeading)
+    }
+
     @Test
     fun acceptsExactSixtyDegreeHeadingStepButSuppressesGreaterStep() {
-        assertEquals(1, CurveDetector.detect(headingStepFixture("exact-60-degree-step-v1", 30.0)).size)
-        assertEquals(0, CurveDetector.detect(headingStepFixture("greater-than-60-degree-step-v1", 29.0)).size)
+        val epsilonBoundary = headingStepFixture(
+            "near-60-degree-step-v1",
+            29.999999999912,
+        )
+        val beyondEpsilon = headingStepFixture(
+            "beyond-near-60-degree-step-v1",
+            28.999999999913,
+        )
+
+        // These are the spherical values produced by the actual fixture observations;
+        // 1e-9° is tight enough to retain the epsilon boundary without rounding noise.
+        assertEquals(60.000000000088, kotlin.math.abs(actualSignedHeadingDelta(epsilonBoundary)), 1e-9)
+        assertEquals(61.000000000087, kotlin.math.abs(actualSignedHeadingDelta(beyondEpsilon)), 1e-9)
+        assertEquals(1, CurveDetector.detect(epsilonBoundary).size)
+        assertEquals(0, CurveDetector.detect(beyondEpsilon).size)
     }
 
     @Test
@@ -140,7 +160,9 @@ class CurveDetectorTest {
 
         assertEquals(1, candidates.size)
         assertEquals(CurveDirection.RIGHT, candidates.single().direction)
-        assertEquals(22.5, candidates.single().signedTurnDegrees, 1e-8)
+        // Nine spherical heading deltas accumulate rounding, so retain a 1e-8° bound.
+        val denseTurnToleranceDegrees = 1e-8
+        assertEquals(22.5, candidates.single().signedTurnDegrees, denseTurnToleranceDegrees)
         assertEquals(180.0, candidates.single().endDistanceMeters - candidates.single().startDistanceMeters, 1e-9)
     }
 
