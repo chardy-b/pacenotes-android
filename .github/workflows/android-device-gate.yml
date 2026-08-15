@@ -147,7 +147,7 @@ jobs:
           name: android-device-diagnostics-${{ needs.verify-input.outputs.commit_sha }}
           path: device-evidence/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
       - name: Verify required success evidence
         if: ${{ success() }}
         run: |
@@ -165,7 +165,7 @@ jobs:
           name: android-device-evidence-${{ needs.verify-input.outputs.commit_sha }}
           path: device-evidence/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7
       - name: Record evidence review checklist
         if: ${{ always() }}
         env:
