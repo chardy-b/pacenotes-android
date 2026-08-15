@@ -51,4 +51,4 @@ jobs:
           name: android-debug-apk-${{ env.CANDIDATE_SHA }}
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7

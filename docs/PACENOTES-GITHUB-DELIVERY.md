@@ -27,7 +27,7 @@ The `Android baseline / build and unit tests` job is authoritative for the exact
 
 - run `:app:assembleDebug`;
 - run `:app:testDebugUnitTest`, `:core-model:test`, and `:pacenotes:test`;
-- upload `app-debug.apk` for 14 days with missing files treated as an error.
+- upload `app-debug.apk` for 7 days with missing files treated as an error.
 
 Read the exact run and artifact metadata. A prior SHA or branch-level green state does not satisfy this gate.
 
@@ -60,6 +60,13 @@ After human review of successful device evidence, manually dispatch `Phone-test 
 - a human-readable release name.
 
 The release workflow must verify the source run, commit, workflow-ref SHA, artifact name, manifest, APK size, and SHA-256, then publish that unchanged APK. It must not rebuild. Release-tag concurrency is serialized; an existing tag is reusable only when it resolves to the same verified commit, so a failed or interrupted publication can be retried safely. Physical-device confirmation remains user evidence and is not implied by emulator success.
+
+## Artifact retention
+
+- Baseline APK and successful device-evidence artifacts expire after 7 days.
+- Device diagnostics expire after 3 days, regardless of the device-gate outcome.
+- Dispatch a phone-test prerelease within the 7-day evidence window. After it expires, rerun the device gate against the candidate commit.
+- A phone-test APK and its required screenshots are prerelease assets, not Actions artifacts. They remain available with the prerelease and are not removed by this retention policy.
 
 ## 6. Merge and close
 
