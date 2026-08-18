@@ -124,6 +124,11 @@ def validate(contract_path, evidence_root, expected_sha, expected_run):
         errors.append("index provenance must be a mapping"); provenance = {}
     if not isinstance(mp, Mapping):
         errors.append("manifest provenance must be a mapping"); mp = {}
+    for source, values in (("index", provenance), ("manifest", mp)):
+        if not isinstance(values.get("baseline"), Mapping) or not isinstance(values.get("device_gate"), Mapping):
+            errors.append(f"{source} provenance must preserve baseline and device_gate sections")
+    provenance = provenance.get("device_gate", {}) if isinstance(provenance, Mapping) else {}
+    mp = mp.get("device_gate", {}) if isinstance(mp, Mapping) else {}
     for key, expected in (("commit", expected_sha), ("run_id", expected_run), ("profile_version", contract.get("profile_version")), ("schema_version", contract.get("schema_version"))):
         if provenance.get(key) != expected: errors.append(f"stale/mismatched index {key}")
         if mp.get(key) != expected: errors.append(f"stale/mismatched manifest {key}")
@@ -196,6 +201,24 @@ def validate(contract_path, evidence_root, expected_sha, expected_run):
         if entry.get("path") != definition.get("path"): errors.append(f"contract path mismatch: {entry.get('scenario')}")
         expected_set = definition.get("set")
         if entry.get("set") != expected_set: errors.append(f"contract set mismatch: {entry.get('scenario')}")
+    apk = manifest.get("apk")
+    if not isinstance(apk, Mapping):
+        errors.append("manifest APK metadata must be a mapping")
+    else:
+        apk_path, apk_size, apk_sha = apk.get("path"), apk.get("size"), apk.get("sha256")
+        valid_apk_path = isinstance(apk_path, str) and bool(apk_path) and not Path(apk_path).is_absolute() and ".." not in Path(apk_path).parts
+        if not valid_apk_path: errors.append("invalid manifest APK path")
+        if not isinstance(apk_size, int) or isinstance(apk_size, bool) or apk_size <= 0: errors.append("manifest APK size must be positive")
+        if not isinstance(apk_sha, str) or re.fullmatch(r"[0-9a-f]{64}", apk_sha) is None: errors.append("invalid manifest APK SHA256")
+        if valid_apk_path:
+            try: apk_data = (root / apk_path).resolve(); apk_data.relative_to(root); data = apk_data.read_bytes()
+            except (OSError, ValueError): data = None
+            if data is None: errors.append("missing manifest APK")
+            else:
+                if apk_size != len(data): errors.append("manifest APK size mismatch")
+                if apk_sha != hashlib.sha256(data).hexdigest(): errors.append("manifest APK SHA256 mismatch")
+                device_apk = provenance.get("apk_size_bytes"), provenance.get("apk_sha256")
+                if device_apk != (apk_size, apk_sha): errors.append("manifest APK does not match device-gate provenance")
     return errors
 
 

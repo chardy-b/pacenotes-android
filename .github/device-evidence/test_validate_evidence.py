@@ -34,9 +34,16 @@ def write_fixture(root, *, contract=None, entries=None, provenance=None, files=N
     for name, data in files.items():
         p = root / name; p.parent.mkdir(parents=True, exist_ok=True); p.write_bytes(data)
     entries = entries if entries is not None else [{"scenario": s, "path": f"{s}.png", "set": "smoke" if s in contract["smoke_scenarios"] else "feature", "profile_version": "1", "sha256": hashlib.sha256(files[f"{s}.png"]).hexdigest(), "size": len(files[f"{s}.png"])} for s in contract["smoke_scenarios"] + contract["feature_scenarios"]]
-    provenance = provenance or {"repository": "owner/repo", "workflow": "device-evidence", "commit": SHA, "run_id": RUN, "run_attempt": 1, "profile_version": "1", "schema_version": "1"}
+    provenance = provenance or {"baseline": {"workflow": "android-baseline", "run_id": 7, "run_attempt": 1, "commit": SHA}, "device_gate": {"repository": "owner/repo", "workflow": "device-evidence", "commit": SHA, "run_id": RUN, "run_attempt": 1, "profile_version": "1", "schema_version": "1"}}
+    if "baseline" not in provenance or "device_gate" not in provenance:
+        provenance = {"baseline": {"workflow": "android-baseline", "run_id": 7, "run_attempt": 1, "commit": SHA}, "device_gate": provenance}
     (root / "index.json").write_text(json.dumps({"provenance": provenance, "entries": entries}))
-    (root / "manifest.json").write_text(json.dumps({"provenance": provenance, "paths": [e["path"] for e in entries]}))
+    apk = b"fixture-apk"
+    (root / "app-debug.apk").write_bytes(apk)
+    provenance["device_gate"]["apk_size_bytes"] = len(apk)
+    provenance["device_gate"]["apk_sha256"] = hashlib.sha256(apk).hexdigest()
+    (root / "index.json").write_text(json.dumps({"provenance": provenance, "entries": entries}))
+    (root / "manifest.json").write_text(json.dumps({"provenance": provenance, "apk": {"path": "app-debug.apk", "size": len(apk), "sha256": hashlib.sha256(apk).hexdigest()}, "paths": [e["path"] for e in entries]}))
 
 
 class ValidatorTests(unittest.TestCase):

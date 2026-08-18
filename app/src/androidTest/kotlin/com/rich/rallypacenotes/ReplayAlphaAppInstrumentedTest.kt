@@ -77,11 +77,11 @@ class ReplayAlphaAppInstrumentedTest {
         }
 
         val context = instrumentation.targetContext
-        val root = context.getExternalFilesDir(null)
-            ?: error("app-private external-files directory is unavailable")
+        // The device gate extracts this same app-private tree with run-as.
+        val root = context.filesDir
         val outputDir = File(root, relativeOutputDir).canonicalFile
         require(outputDir.toPath().startsWith(root.canonicalFile.toPath())) {
-            "screenshot_output_dir must remain under app-private external-files"
+            "screenshot_output_dir must remain under app-private files"
         }
         check(outputDir.mkdirs() || outputDir.isDirectory) {
             "cannot create screenshot output directory: $outputDir"

@@ -41,11 +41,13 @@ jobs:
           DEVICE_RUN_ID: ${{ inputs.device_run_id }}
           EXPECTED_SHA: ${{ inputs.expected_commit_sha }}
           RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_NAME: ${{ inputs.release_name }}
         with:
           script: |
             const runId = Number(process.env.DEVICE_RUN_ID);
             const expectedSha = process.env.EXPECTED_SHA;
             const releaseTag = process.env.RELEASE_TAG;
+            const releaseName = process.env.RELEASE_NAME;
             if (!Number.isSafeInteger(runId) || runId <= 0) {
               core.setFailed("device_run_id must be a positive integer");
               return;
@@ -56,6 +58,10 @@ jobs:
             }
             if (!/^[A-Za-z0-9._-]+$/.test(releaseTag)) {
               core.setFailed("release_tag may contain only letters, numbers, dot, underscore, and hyphen");
+              return;
+            }
+            if (!releaseName || releaseName.length > 256 || /[\r\n]/.test(releaseName)) {
+              core.setFailed("release_name must be non-empty, at most 256 characters, and contain no newlines");
               return;
             }
             const {data: run} = await github.rest.actions.getWorkflowRun({
@@ -101,6 +107,14 @@ jobs:
           run-id: ${{ inputs.device_run_id }}
           name: ${{ steps.validate.outputs.artifact_name }}
           path: verified-device-evidence
+      - name: Check out the verified contract and validator
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ inputs.expected_commit_sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/device-evidence/scenario-contract.json
+            .github/device-evidence/validate_evidence.py
       - name: Verify artifact manifest and APK checksum
         env:
           EXPECTED_SHA: ${{ inputs.expected_commit_sha }}
@@ -113,20 +127,34 @@ jobs:
           from pathlib import Path
 
           root = Path("verified-device-evidence")
-          manifest_path = root / "evidence-manifest.json"
+          manifest_path = root / "manifest.json"
           apk_path = root / "app-debug.apk"
           manifest = json.loads(manifest_path.read_text())
-          assert manifest["repository"] == os.environ["GITHUB_REPOSITORY"]
-          assert manifest["commit_sha"] == os.environ["EXPECTED_SHA"]
-          assert manifest["actions_run_id"] == int(os.environ["EXPECTED_RUN_ID"])
-          assert manifest["workflow"] == "Android device gate"
-          assert manifest["workflow_ref_sha"] == os.environ["EXPECTED_SHA"]
-          assert manifest["apk_path"] == "app-debug.apk"
-          assert apk_path.stat().st_size == manifest["apk_size_bytes"]
+          device = manifest["provenance"]["device_gate"]
+          baseline = manifest["provenance"]["baseline"]
+          assert device["repository"] == os.environ["GITHUB_REPOSITORY"]
+          assert device["commit"] == os.environ["EXPECTED_SHA"]
+          assert device["run_id"] == int(os.environ["EXPECTED_RUN_ID"])
+          assert device["workflow"] == "Android device gate"
+          assert baseline["commit"] == os.environ["EXPECTED_SHA"]
+          assert manifest["apk"]["path"] == "app-debug.apk"
+          assert apk_path.stat().st_size == manifest["apk"]["size"]
           digest = hashlib.sha256(apk_path.read_bytes()).hexdigest()
-          assert digest == manifest["apk_sha256"]
+          assert digest == manifest["apk"]["sha256"]
           (root / "verified-apk-sha256.txt").write_text(digest + "\n")
+          assert (root / "index.json").stat().st_size > 0
           PY
+      - name: Validate scenario evidence contract
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_commit_sha }}
+          EXPECTED_RUN_ID: ${{ inputs.device_run_id }}
+        run: |
+          python3 .github/device-evidence/validate_evidence.py \
+            .github/device-evidence/scenario-contract.json \
+            verified-device-evidence "$EXPECTED_SHA" "$EXPECTED_RUN_ID"
+          test -s verified-device-evidence/index.json
+          test -s verified-device-evidence/manifest.json
+          test "$(find verified-device-evidence -maxdepth 1 -type f -name '*.png' | wc -l)" -eq 5
           cp verified-device-evidence/app-debug.apk "rally-pacenotes-${EXPECTED_SHA}-debug.apk"
       - name: Ensure release tag resolves to verified commit
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
@@ -203,4 +231,8 @@ jobs:
             Source artifact: `${{ steps.validate.outputs.artifact_name }}`
 
             Physical-device behavior remains user evidence and is separate from emulator verification.
-          files: rally-pacenotes-${{ inputs.expected_commit_sha }}-debug.apk
+          files: |
+            rally-pacenotes-${{ inputs.expected_commit_sha }}-debug.apk
+            verified-device-evidence/index.json
+            verified-device-evidence/manifest.json
+            verified-device-evidence/*.png

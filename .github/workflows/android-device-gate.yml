@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: android-device-${{ inputs.commit_sha }}
@@ -59,8 +60,41 @@ jobs:
         env:
           EXPECTED_SHA: ${{ needs.verify-input.outputs.commit_sha }}
         run: |
-          test "$GITHUB_SHA" = "$EXPECTED_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Validate evidence label
+        env:
+          EVIDENCE_LABEL: ${{ inputs.evidence_label }}
+        run: |
+          python3 -c 'import os,re; label=os.environ["EVIDENCE_LABEL"]; assert re.fullmatch(r"WIL-[1-9][0-9]*", label), "evidence_label must match WIL-[1-9][0-9]*"'
+      - name: Verify exact-SHA baseline provenance
+        env:
+          EXPECTED_SHA: ${{ needs.verify-input.outputs.commit_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$EVIDENCE_DIR"
+          baseline_json=$(mktemp)
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/workflows/android-baseline.yml/runs?head_sha=$EXPECTED_SHA&status=completed&per_page=100" > "$baseline_json"
+          python3 - "$baseline_json" "$EXPECTED_SHA" "$EVIDENCE_DIR/baseline-provenance.json" <<'PY'
+          import json, os, sys
+          pages = json.load(open(sys.argv[1], encoding="utf-8"))
+          runs = [run for page in pages for run in page.get("workflow_runs", [])
+                  if run.get("head_sha") == sys.argv[2] and run.get("conclusion") == "success"]
+          if not runs:
+              raise SystemExit("no successful Android baseline run for exact requested SHA")
+          run = sorted(runs, key=lambda item: (item.get("run_number", 0), item["id"]))[-1]
+          if int(run["id"]) <= 0 or int(run.get("run_attempt", 0)) <= 0:
+              raise SystemExit("baseline run has invalid provenance")
+          out = {"schema_version": 1, "repository": os.environ["GITHUB_REPOSITORY"],
+                 "workflow": run.get("name"), "workflow_file": "android-baseline.yml",
+                 "commit": run["head_sha"], "run_id": int(run["id"]),
+                 "run_attempt": int(run["run_attempt"]), "conclusion": run["conclusion"],
+                 "run_url": run.get("html_url")}
+          if not out["workflow"] or not out["run_url"]:
+              raise SystemExit("baseline run is missing workflow/url provenance")
+          os.makedirs(os.path.dirname(sys.argv[3]), exist_ok=True)
+          json.dump(out, open(sys.argv[3], "w", encoding="utf-8"), indent=2, sort_keys=True)
+          open(sys.argv[3], "a", encoding="utf-8").write("\n")
+          PY
       - name: Set up Java 21
         uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
@@ -98,7 +132,7 @@ jobs:
             set -eu;
             mkdir -p "$EVIDENCE_DIR";
             capture_png() { adb exec-out screencap -p > "$EVIDENCE_DIR/$1"; python3 -c "import struct,sys; p=sys.argv[1]; data=open(p,'rb').read(24); assert len(data)==24 and data[:8]==b'\\x89PNG\\r\\n\\x1a\\n', f'invalid PNG: {p}'; width,height=struct.unpack('>II',data[16:24]); assert width>0 and height>0, f'invalid PNG dimensions: {p}'" "$EVIDENCE_DIR/$1"; };
-            collect() { status=$?; adb shell uiautomator dump /sdcard/device-window.xml >/dev/null 2>&1 || true; adb exec-out cat /sdcard/device-window.xml > "$EVIDENCE_DIR/device-window.xml" 2>/dev/null || true; capture_png final-screen.png || true; adb logcat -d -t 1500 > "$EVIDENCE_DIR/device-logcat.txt" || true; set -- $(adb shell pidof "$APPLICATION_ID" || true); app_pid=${1:-}; if [ -n "$app_pid" ]; then if ! adb logcat -d -v threadtime --pid="$app_pid" > "$EVIDENCE_DIR/app-logcat.txt"; then printf '%s\n' 'App-specific logcat capture failed; inspect device-logcat.txt.' > "$EVIDENCE_DIR/app-logcat-warning.txt"; fi; else printf '%s\n' 'App PID unavailable during diagnostics; inspect device-logcat.txt.' > "$EVIDENCE_DIR/app-logcat-warning.txt"; fi; adb shell dumpsys activity activities > "$EVIDENCE_DIR/activity-state.txt" || true; adb shell getprop > "$EVIDENCE_DIR/device-properties.txt" || true; printf 'exit_status=%s\n' "$status" > "$EVIDENCE_DIR/device-gate-status.txt"; exit "$status"; };
+            collect() { status=$?; adb logcat -d -t 1500 > "$EVIDENCE_DIR/device-logcat.txt" || true; set -- $(adb shell pidof "$APPLICATION_ID" || true); app_pid=${1:-}; if [ -n "$app_pid" ]; then if ! adb logcat -d -v threadtime --pid="$app_pid" > "$EVIDENCE_DIR/app-logcat.txt"; then printf '%s\n' 'App-specific logcat capture failed; inspect device-logcat.txt.' > "$EVIDENCE_DIR/app-logcat-warning.txt"; fi; else printf '%s\n' 'App PID unavailable during diagnostics; inspect device-logcat.txt.' > "$EVIDENCE_DIR/app-logcat-warning.txt"; fi; adb shell dumpsys activity activities > "$EVIDENCE_DIR/activity-state.txt" || true; adb shell getprop > "$EVIDENCE_DIR/device-properties.txt" || true; printf 'exit_status=%s\n' "$status" > "$EVIDENCE_DIR/device-gate-status.txt"; exit "$status"; };
             trap collect EXIT;
             ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleDebugAndroidTest;
             cp app/build/outputs/apk/debug/app-debug.apk "$EVIDENCE_DIR/app-debug.apk";
@@ -106,7 +140,7 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk;
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk;
             instrumentation_exit=0;
-            ./gradlew --no-daemon --stacktrace :app:connectedDebugAndroidTest > "$EVIDENCE_DIR/instrumentation-output.txt" 2>&1 || instrumentation_exit=$?;
+            ./gradlew --no-daemon --stacktrace :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.screenshot_output_dir=wil-86-screenshots > "$EVIDENCE_DIR/instrumentation-output.txt" 2>&1 || instrumentation_exit=$?;
             test "$instrumentation_exit" -eq 0;
             grep -q 'BUILD SUCCESSFUL' "$EVIDENCE_DIR/instrumentation-output.txt";
             adb install -r app/build/outputs/apk/debug/app-debug.apk;
@@ -120,17 +154,14 @@ jobs:
             adb shell dumpsys activity activities > "$EVIDENCE_DIR/activity-state.txt";
             grep -Eq '(mResumedActivity|topResumedActivity|ResumedActivity).*com\.rich\.rallypacenotes/\.MainActivity' "$EVIDENCE_DIR/activity-state.txt";
             sleep 3;
-            capture_png app-launched.png;
-            adb shell uiautomator dump /sdcard/app-window.xml >/dev/null;
-            adb exec-out cat /sdcard/app-window.xml > "$EVIDENCE_DIR/app-window.xml";
-            test -s "$EVIDENCE_DIR/app-window.xml";
+            for screenshot in launch-stopped-v1.png running-v1.png paused-v1.png reset-v1.png wil-86-screenshot-evidence-v1.png; do adb exec-out run-as "$APPLICATION_ID" cat "files/wil-86-screenshots/$screenshot" > "$EVIDENCE_DIR/$screenshot"; test -s "$EVIDENCE_DIR/$screenshot"; done;
             cp -R app/build/reports/androidTests "$EVIDENCE_DIR/androidTest-reports";
             sha256sum "$EVIDENCE_DIR/app-debug.apk" | cut -d' ' -f1 > "$EVIDENCE_DIR/app-debug.apk.sha256";
-            python3 -c "import hashlib,json,os,pathlib; d=pathlib.Path(os.environ['EVIDENCE_DIR']); apk=d/'app-debug.apk'; manifest={'schema_version':1,'repository':os.environ['GITHUB_REPOSITORY'],'commit_sha':os.environ['EXPECTED_SHA'],'actions_run_id':int(os.environ['GITHUB_RUN_ID']),'actions_run_attempt':int(os.environ['GITHUB_RUN_ATTEMPT']),'workflow':os.environ['GITHUB_WORKFLOW'],'workflow_ref_sha':os.environ['GITHUB_SHA'],'evidence_label':os.environ['EVIDENCE_LABEL'],'api_level':int(os.environ['DEVICE_API_LEVEL']),'emulator_profile':os.environ['DEVICE_PROFILE'],'apk_path':'app-debug.apk','apk_size_bytes':apk.stat().st_size,'apk_sha256':hashlib.sha256(apk.read_bytes()).hexdigest()}; (d/'evidence-manifest.json').write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\\n')";
-            test -s "$EVIDENCE_DIR/app-launched.png";
-            test -s "$EVIDENCE_DIR/app-window.xml";
-            test -s "$EVIDENCE_DIR/instrumentation-output.txt";
-            test -s "$EVIDENCE_DIR/evidence-manifest.json"
+            python3 -c "import hashlib,json,os,pathlib; d=pathlib.Path(os.environ['EVIDENCE_DIR']); apk=d/'app-debug.apk'; baseline=json.load(open(d/'baseline-provenance.json')); device={'repository':os.environ['GITHUB_REPOSITORY'],'workflow':os.environ['GITHUB_WORKFLOW'],'commit':os.environ['EXPECTED_SHA'],'run_id':int(os.environ['GITHUB_RUN_ID']),'run_attempt':int(os.environ['GITHUB_RUN_ATTEMPT']),'profile_version':'phone-replay-v1','schema_version':'wil-86-evidence-v1','api_level':int(os.environ['DEVICE_API_LEVEL']),'emulator_profile':os.environ['DEVICE_PROFILE'],'apk_size_bytes':apk.stat().st_size,'apk_sha256':hashlib.sha256(apk.read_bytes()).hexdigest()}; (d/'provenance.json').write_text(json.dumps({'baseline':baseline,'device_gate':device},indent=2,sort_keys=True)+'\\n')";
+            python3 .github/device-evidence/generate_index.py .github/device-evidence/scenario-contract.json "$EVIDENCE_DIR" --provenance "$EVIDENCE_DIR/provenance.json" --apk app-debug.apk;
+            python3 .github/device-evidence/validate_evidence.py .github/device-evidence/scenario-contract.json "$EVIDENCE_DIR" "$EXPECTED_SHA" "$GITHUB_RUN_ID";
+            test -s "$EVIDENCE_DIR/index.json";
+            test -s "$EVIDENCE_DIR/instrumentation-output.txt"
       - name: Record workflow-level outcome
         if: ${{ always() }}
         env:
@@ -153,10 +184,9 @@ jobs:
         run: |
           test -s device-evidence/app-debug.apk
           test -s device-evidence/app-debug.apk.sha256
-          test -s device-evidence/app-launched.png
-          test -s device-evidence/app-window.xml
+          test -s device-evidence/manifest.json
+          test -s device-evidence/index.json
           test -s device-evidence/instrumentation-output.txt
-          test -s device-evidence/evidence-manifest.json
           test -d device-evidence/androidTest-reports
       - name: Upload verified device evidence
         if: ${{ success() }}
@@ -179,6 +209,6 @@ jobs:
             echo "- [ ] Instrumentation output reports success."
             echo "- [ ] \`app-launched.png\` shows Rally Pacenotes, not launcher/system UI."
             echo "- [ ] Ticket-required screenshots and states were captured or attached by the ticket-specific test."
-            echo "- [ ] XML, logs, device state, APK checksum, and manifest match this run."
+            echo "- [ ] Five contract PNGs, XML/log diagnostics, device state, APK checksum, and manifest match this run."
             echo "- [ ] Human visual review is complete before any phone-test release."
           } >> "$GITHUB_STEP_SUMMARY"
