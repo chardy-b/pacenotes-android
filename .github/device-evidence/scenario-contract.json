@@ -1,0 +1,14 @@
+{
+  "schema_version": "wil-86-evidence-v1",
+  "profile_version": "phone-replay-v1",
+  "privacy": {"redaction_required": true, "contains_credentials": false, "contains_private_data": false},
+  "smoke_scenarios": ["launch-stopped-v1", "running-v1", "paused-v1", "reset-v1"],
+  "feature_scenarios": ["wil-86-screenshot-evidence-v1"],
+  "scenarios": {
+    "launch-stopped-v1": {"id": "launch-stopped-v1", "path": "launch-stopped-v1.png", "set": "smoke", "profile_version": "phone-replay-v1", "expected_state": "stopped", "privacy": {"redaction_required": true}},
+    "running-v1": {"id": "running-v1", "path": "running-v1.png", "set": "smoke", "profile_version": "phone-replay-v1", "expected_state": "running", "privacy": {"redaction_required": true}},
+    "paused-v1": {"id": "paused-v1", "path": "paused-v1.png", "set": "smoke", "profile_version": "phone-replay-v1", "expected_state": "paused", "privacy": {"redaction_required": true}},
+    "reset-v1": {"id": "reset-v1", "path": "reset-v1.png", "set": "smoke", "profile_version": "phone-replay-v1", "expected_state": "reset", "privacy": {"redaction_required": true}},
+    "wil-86-screenshot-evidence-v1": {"id": "wil-86-screenshot-evidence-v1", "path": "wil-86-screenshot-evidence-v1.png", "set": "feature", "profile_version": "phone-replay-v1", "expected_state": "feature-verified", "privacy": {"redaction_required": true}}
+  }
+}
