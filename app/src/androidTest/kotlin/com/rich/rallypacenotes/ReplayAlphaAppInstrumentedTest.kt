@@ -92,5 +92,11 @@ class ReplayAlphaAppInstrumentedTest {
         check(UiDevice.getInstance(instrumentation).takeScreenshot(output)) {
             "UiDevice.takeScreenshot failed for $fileName"
         }
+        val hierarchy = File(outputDir, "app-window.xml").canonicalFile
+        require(hierarchy.parentFile == outputDir) { "UI hierarchy path escaped output directory" }
+        UiDevice.getInstance(instrumentation).dumpWindowHierarchy(hierarchy)
+        check(hierarchy.isFile && hierarchy.length() > 0) {
+            "UiDevice.dumpWindowHierarchy produced no app-window.xml"
+        }
     }
 }

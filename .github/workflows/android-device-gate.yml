@@ -155,6 +155,8 @@ jobs:
             grep -Eq '(mResumedActivity|topResumedActivity|ResumedActivity).*com\.rich\.rallypacenotes/\.MainActivity' "$EVIDENCE_DIR/activity-state.txt";
             sleep 3;
             for screenshot in launch-stopped-v1.png running-v1.png paused-v1.png reset-v1.png wil-86-screenshot-evidence-v1.png; do adb exec-out run-as "$APPLICATION_ID" cat "files/wil-86-screenshots/$screenshot" > "$EVIDENCE_DIR/$screenshot"; test -s "$EVIDENCE_DIR/$screenshot"; done;
+            adb exec-out run-as "$APPLICATION_ID" cat files/wil-86-screenshots/app-window.xml > "$EVIDENCE_DIR/app-window.xml";
+            test -s "$EVIDENCE_DIR/app-window.xml";
             cp -R app/build/reports/androidTests "$EVIDENCE_DIR/androidTest-reports";
             sha256sum "$EVIDENCE_DIR/app-debug.apk" | cut -d' ' -f1 > "$EVIDENCE_DIR/app-debug.apk.sha256";
             python3 -c "import hashlib,json,os,pathlib; d=pathlib.Path(os.environ['EVIDENCE_DIR']); apk=d/'app-debug.apk'; baseline=json.load(open(d/'baseline-provenance.json')); device={'repository':os.environ['GITHUB_REPOSITORY'],'workflow':os.environ['GITHUB_WORKFLOW'],'commit':os.environ['EXPECTED_SHA'],'run_id':int(os.environ['GITHUB_RUN_ID']),'run_attempt':int(os.environ['GITHUB_RUN_ATTEMPT']),'profile_version':'phone-replay-v1','schema_version':'wil-86-evidence-v1','api_level':int(os.environ['DEVICE_API_LEVEL']),'emulator_profile':os.environ['DEVICE_PROFILE'],'apk_size_bytes':apk.stat().st_size,'apk_sha256':hashlib.sha256(apk.read_bytes()).hexdigest()}; (d/'provenance.json').write_text(json.dumps({'baseline':baseline,'device_gate':device},indent=2,sort_keys=True)+'\\n')";
@@ -187,6 +189,7 @@ jobs:
           test -s device-evidence/manifest.json
           test -s device-evidence/index.json
           test -s device-evidence/instrumentation-output.txt
+          test -s device-evidence/app-window.xml
           test -d device-evidence/androidTest-reports
       - name: Upload verified device evidence
         if: ${{ success() }}
