@@ -6,7 +6,15 @@ A credential-free, open-stack Android **GPX route-following pacenote companion**
 
 Open `design/rally-technical-dossier-inspo.html` directly in a browser for the visual direction. Read `design/compose-technical-dossier-translation.md` for the original Jetpack Compose component architecture, token mapping, accessibility behavior, and guidance for using Evangelion-inspired web libraries as reference material only. External references and reuse boundaries are recorded in [`docs/design-inspiration.md`](docs/design-inspiration.md).
 
-Image provenance is linked inside the guide. The project takes inspiration from broad technical-drawing and retro street-racing principles only; it does not use or reproduce franchise artwork, logos, screen layouts, or characters.
+The visual direction board uses original HTML/CSS studies only. The project takes inspiration from broad technical-drawing and retro street-racing principles only; it does not use or reproduce franchise artwork, logos, screen layouts, characters, or downloaded reference imagery.
+
+## Licence and notices
+
+Pacenotes is licensed under the [Apache License 2.0](LICENSE). Review [NOTICE](NOTICE) before redistributing the project or adding third-party material.
+
+## Public release operations
+
+Follow [the public-release checklist](docs/PUBLIC-RELEASE.md) before changing repository visibility or publishing a phone-test APK. The `phone-test-release` workflow is restricted to the repository owner while the repository is private. After the repository becomes public, configure and verify the `phone-test-release` Environment's required reviewer rule before the next release.
 
 ## Project management
 

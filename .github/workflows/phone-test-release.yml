@@ -31,6 +31,11 @@ concurrency:
 jobs:
   publish:
     name: Publish verified phone-test APK
+    # This owner-only guard remains effective while the repository is private,
+    # where the current GitHub plan cannot enforce required environment reviewers.
+    # After the repository becomes public, configure required reviewers on this environment.
+    if: github.actor == 'Lichard'
+    environment: phone-test-release
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -115,6 +120,8 @@ jobs:
           sparse-checkout: |
             .github/device-evidence/scenario-contract.json
             .github/device-evidence/validate_evidence.py
+            LICENSE
+            NOTICE
       - name: Verify artifact manifest and APK checksum
         env:
           EXPECTED_SHA: ${{ inputs.expected_commit_sha }}
@@ -236,3 +243,5 @@ jobs:
             verified-device-evidence/index.json
             verified-device-evidence/manifest.json
             verified-device-evidence/*.png
+            LICENSE
+            NOTICE

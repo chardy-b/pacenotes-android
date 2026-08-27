@@ -69,15 +69,16 @@
     h2 { font: 700 clamp(30px, 4vw, 54px)/.95 var(--font-display); letter-spacing: -.025em; text-transform: uppercase; margin: 0; }
     .section-note { color: var(--muted); max-width: 550px; margin: 0 0 0 auto; font-size: 14px; line-height: 1.5; }
     .moodboard { display: grid; grid-template-columns: 1.08fr .92fr .72fr; min-height: 470px; gap: 12px; }
-    .image-tile { position: relative; overflow: hidden; background: var(--panel); border: var(--rule); min-height: 240px; }
-    .image-tile img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(.66) contrast(1.12) brightness(.77); transition: transform .7s ease, filter .4s ease; }
-    .image-tile:hover img { transform: scale(1.04); filter: saturate(.82) contrast(1.1) brightness(.88); }
+    .image-tile { position: relative; isolation: isolate; overflow: hidden; background: var(--panel); border: var(--rule); min-height: 240px; }
+    .image-tile::before { content: ""; position: absolute; inset: 0; background: linear-gradient(155deg, #273d3d 0 24%, #101719 24% 46%, #263135 46% 53%, #090b0c 53%); transition: transform .7s ease, filter .4s ease; }
+    .image-tile.route-study::before { background: linear-gradient(151deg, #151d1f 0 31%, #476466 31% 34%, #111719 34% 48%, #263f40 48% 51%, #0b0e0f 51%); }
+    .image-tile.technical-tile::before { background: repeating-linear-gradient(90deg, transparent 0 38px, rgb(142 205 203 / .28) 39px 40px, transparent 41px 78px), repeating-linear-gradient(0deg, transparent 0 38px, rgb(142 205 203 / .22) 39px 40px, transparent 41px 78px), radial-gradient(circle at 50% 46%, transparent 0 17%, rgb(226 73 61 / .8) 17.3% 18%, transparent 18.3% 26%, #172023 26.3% 27%, #0b0e0f 27.3%); }
+    .image-tile:hover::before { transform: scale(1.04); filter: brightness(1.12); }
     .image-tile::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 42%, rgb(11 13 14 / .86)); }
     .tile-label { position: absolute; z-index: 1; left: 16px; right: 16px; bottom: 15px; font: 11px/1.4 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
     .tile-label strong { display: block; color: var(--paper); font-size: 13px; }
     .tile-label span { color: var(--cyan); font-size: 10px; }
-    .technical-tile img { object-fit: cover; object-position: 50% 45%; filter: invert(1) grayscale(1) contrast(.75) opacity(.54); }
-    .technical-tile::before { content: "010 / VECTOR STUDY"; position: absolute; z-index: 2; left: 16px; top: 16px; color: var(--red); font: 11px var(--font-mono); letter-spacing: .08em; }
+    .vector-study { position: absolute; z-index: 2; left: 16px; top: 16px; color: var(--red); font: 11px var(--font-mono); letter-spacing: .08em; }
     .palette { display: grid; grid-template-columns: repeat(8, 1fr); border: var(--rule); }
     .swatch { min-height: 150px; padding: 12px; display: flex; align-items: end; color: var(--void); font: 10px var(--font-mono); letter-spacing: .06em; }
     .swatch.dark { color: var(--paper); }
@@ -164,11 +165,11 @@
     </header>
 
     <section id="mood">
-      <div class="section-head"><span class="section-index">01 /</span><h2>Image language</h2><p class="section-note">Use roads and mechanical diagrams as atmosphere. The active screen stays quieter than this board; grain and scan texture are for pre-drive, replay, and recap.</p></div>
+      <div class="section-head"><span class="section-index">01 /</span><h2>Image language</h2><p class="section-note">Use roads and mechanical diagrams as atmosphere. These original CSS studies are intentionally abstract; the active screen stays quieter than this board.</p></div>
       <div class="moodboard">
-        <figure class="image-tile"><img src="assets/dark-mountains.jpg" alt="Dark mountain silhouette used for night-drive mood" /><figcaption class="tile-label"><strong>Nocturnal terrain</strong><span>void / silhouette / restrained red signal</span></figcaption></figure>
-        <figure class="image-tile"><img src="assets/long-road.jpg" alt="Long mountain road used for route-forward visual reference" /><figcaption class="tile-label"><strong>Route as invitation</strong><span>road line / horizon / forward momentum</span></figcaption></figure>
-        <figure class="image-tile technical-tile"><img src="assets/technical-drawing-hole.png" alt="Technical drawing detail used as diagrammatic reference" /><figcaption class="tile-label"><strong>Measured, not ornamental</strong><span>ticks / construction lines / label hierarchy</span></figcaption></figure>
+        <figure class="image-tile" role="img" aria-label="Abstract original CSS study of nocturnal terrain"><figcaption class="tile-label"><strong>Nocturnal terrain</strong><span>void / silhouette / restrained red signal</span></figcaption></figure>
+        <figure class="image-tile route-study" role="img" aria-label="Abstract original CSS study of a route line and horizon"><figcaption class="tile-label"><strong>Route as invitation</strong><span>road line / horizon / forward momentum</span></figcaption></figure>
+        <figure class="image-tile technical-tile" role="img" aria-label="Abstract original CSS technical drawing study"><span class="vector-study" aria-hidden="true">010 / VECTOR STUDY</span><figcaption class="tile-label"><strong>Measured, not ornamental</strong><span>ticks / construction lines / label hierarchy</span></figcaption></figure>
       </div>
     </section>
 
@@ -234,8 +235,8 @@
     </section>
 
     <section>
-      <div class="section-head"><span class="section-index">06 /</span><h2>Asset provenance</h2><p class="section-note">Downloaded locally for this inspiration board. Confirm license suitability again before a public/commercial release or replacing these with final commissioned imagery.</p></div>
-      <div class="source-list"><p><a href="https://commons.wikimedia.org/wiki/File:Dark_Mountains_(Unsplash).jpg">Dark Mountains (Unsplash)</a> — Wikimedia Commons, listed CC0 1.0.</p><p><a href="https://commons.wikimedia.org/wiki/File:Long_road_into_the_mountains_(Unsplash).jpg">Long road into the mountains (Unsplash)</a> — Wikimedia Commons, listed CC0 1.0.</p><p><a href="https://commons.wikimedia.org/wiki/File:Technical_Drawing_Hole_01.png">Technical Drawing Hole 01</a> — Wikimedia Commons, public domain.</p></div>
+      <div class="section-head"><span class="section-index">06 /</span><h2>Asset provenance</h2><p class="section-note">This board contains no downloaded images or third-party graphics. Its studies are rendered from original HTML and CSS in this file.</p></div>
+      <div class="source-list"><p>See the repository <code>NOTICE</code> file for the public-release provenance policy and third-party notice process.</p></div>
     </section>
 
     <footer>RALLY NAV / RD-00 / ORIGINAL VISUAL EXPLORATION / INSPIRATION IS NOT A LICENSE TO COPY</footer>

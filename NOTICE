@@ -1,0 +1,26 @@
+Pacenotes
+Copyright 2026 Pacenotes contributors
+
+This repository's original source code, documentation, and design studies are licensed under the Apache License, Version 2.0. See LICENSE.
+
+Public-release provenance policy
+-------------------------------
+The repository does not include downloaded reference images or third-party design assets. The visual studies in design/rally-technical-dossier-inspo.html are rendered from the original HTML and CSS in that file.
+
+Known direct runtime dependencies
+-------------------------------
+* AndroidX Activity Compose 1.10.0 — Apache-2.0. Source: https://github.com/androidx/androidx
+* AndroidX Compose BOM 2024.12.01, including Compose UI, UI Tooling Preview, and Material 3 — Apache-2.0. Source: https://github.com/androidx/androidx
+* MapLibre Android 13.0.2 — BSD-2-Clause. Source: https://github.com/maplibre/maplibre-native
+* Kotlin standard library — Apache-2.0. Source: https://github.com/JetBrains/kotlin
+
+The distributed APK also contains transitive dependencies. A release must include a generated, version-pinned third-party notice bundle for its resolved runtime dependency graph. Do not publish an APK until that bundle has been reviewed and attached to the corresponding GitHub Release.
+
+Before shipping a binary or adding third-party source code, assets, data, fonts, or other material, maintainers must:
+
+1. record the upstream source and immutable version or revision;
+2. verify the applicable licence and attribution obligations;
+3. include required licence text and notices in the distributed binary or documentation; and
+4. confirm that the material is compatible with Apache-2.0 and the intended distribution.
+
+Names and trademarks belong to their respective owners. This NOTICE does not grant trademark rights.
