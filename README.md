@@ -24,6 +24,7 @@ Follow [the public-release checklist](docs/PUBLIC-RELEASE.md) before changing re
 - [Decision record](docs/DECISIONS.md) — accepted architecture, safety, vendor, and design choices.
 - [Context-free handoff](docs/SESSION-HANDOFF.md) — required reading and a ready-to-use resumption prompt.
 - [Design inspiration](docs/design-inspiration.md) — external sources and reuse boundaries.
+- [Factory foundations](docs/factory/README.md) — canonical contracts, independent verification, and per-run evidence ledgers.
 
 ## Status
 
