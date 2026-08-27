@@ -31,6 +31,8 @@ jobs:
           persist-credentials: false
       - name: Verify checked-out candidate
         run: test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+      - name: Validate factory documentation
+        run: python3 scripts/validate_factory_docs.py
       - name: Set up Java 21
         uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
