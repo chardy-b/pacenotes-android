@@ -14,7 +14,7 @@ Known direct runtime dependencies
 * MapLibre Android 13.0.2 — BSD-2-Clause. Source: https://github.com/maplibre/maplibre-native
 * Kotlin standard library — Apache-2.0. Source: https://github.com/JetBrains/kotlin
 
-The distributed APK also contains transitive dependencies. A release must include a generated, version-pinned third-party notice bundle for its resolved runtime dependency graph. Do not publish an APK until that bundle has been reviewed and attached to the corresponding GitHub Release.
+The distributed APK also contains transitive dependencies. Every APK release must include a generated, version-pinned third-party notice bundle for its resolved runtime dependency graph. Do not publish an APK until that bundle has been reviewed and attached to the corresponding GitHub Release.
 
 Before shipping a binary or adding third-party source code, assets, data, fonts, or other material, maintainers must:
 

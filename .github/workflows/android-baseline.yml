@@ -54,3 +54,125 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+  publish-main-prerelease:
+    name: Publish automated main-build prerelease
+    needs: build-and-unit-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      CANDIDATE_SHA: ${{ github.sha }}
+      RELEASE_TAG: ci-main-${{ github.sha }}
+    steps:
+      - name: Check out exact merged commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+      - name: Verify checked-out merged commit
+        run: test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+      - name: Create or verify immutable release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          case "$RELEASE_TAG" in ''|.|..|*/*|*[[:space:]]*) echo "invalid release tag" >&2; exit 1;; esac
+          python3 - <<'PY'
+          import json, os, sys, urllib.error, urllib.request
+          repo, tag, expected = os.environ['GITHUB_REPOSITORY'], os.environ['RELEASE_TAG'], os.environ['CANDIDATE_SHA']
+          base = f'https://api.github.com/repos/{repo}/git/'
+          headers = {
+              'Authorization': f'Bearer {os.environ["GH_TOKEN"]}',
+              'Accept': 'application/vnd.github+json',
+              'Content-Type': 'application/json',
+              'X-GitHub-Api-Version': '2022-11-28',
+          }
+          def request(path, method='GET', payload=None):
+              data = None if payload is None else json.dumps(payload).encode()
+              req = urllib.request.Request(base + path, data=data, headers=headers, method=method)
+              with urllib.request.urlopen(req) as response:
+                  return json.load(response)
+          def resolve(obj):
+              for _ in range(4):
+                  if obj['type'] == 'commit': return obj['sha']
+                  if obj['type'] != 'tag': raise SystemExit('release tag does not resolve to a commit')
+                  obj = request('tags/' + obj['sha'])['object']
+              raise SystemExit('release tag nesting exceeds bound')
+          try:
+              # This is the atomic create-or-conflict operation. A 422 means another
+              # actor already owns the tag; it must resolve to this exact commit.
+              created = request('refs', 'POST', {'ref': 'refs/tags/' + tag, 'sha': expected})
+              actual = resolve(created['object'])
+          except urllib.error.HTTPError as error:
+              if error.code != 422: raise
+              try:
+                  detail = json.loads(error.read().decode('utf-8'))
+              except (UnicodeDecodeError, json.JSONDecodeError):
+                  raise SystemExit('tag creation returned an unreadable validation error')
+              if detail.get('message') != 'Reference already exists':
+                  raise SystemExit('tag creation failed validation: ' + str(detail.get('message', 'unknown error')))
+              actual = resolve(request('ref/tags/' + tag)['object'])
+          if actual != expected:
+              raise SystemExit('existing release tag resolves to a different commit')
+          PY
+      - name: Download unchanged baseline APK
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: android-debug-apk-${{ env.CANDIDATE_SHA }}
+          path: release-apk
+      - name: Create and verify release provenance
+        run: |
+          set -eu
+          test -s release-apk/app-debug.apk
+          test -s LICENSE
+          test -s NOTICE
+          sha256sum release-apk/app-debug.apk > release-apk/app-debug.apk.sha256
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          apk = Path("release-apk/app-debug.apk")
+          manifest = {
+              "repository": os.environ["GITHUB_REPOSITORY"],
+              "commit": os.environ["CANDIDATE_SHA"],
+              "artifact": "android-debug-apk-" + os.environ["CANDIDATE_SHA"],
+              "apk": {"path": apk.name, "size": apk.stat().st_size,
+                      "sha256": hashlib.sha256(apk.read_bytes()).hexdigest()},
+          }
+          Path("release-apk/apk-provenance.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+          assert manifest["apk"]["sha256"] == hashlib.sha256(apk.read_bytes()).hexdigest()
+          PY
+      - name: Generate resolved dependency notice bundle
+        run: |
+          set -eu
+          mkdir -p release-notices
+          ./gradlew --no-daemon :app:dependencies --configuration debugRuntimeClasspath > release-notices/debugRuntimeClasspath.txt
+          {
+            printf '%s\n' 'Pacenotes resolved runtime dependency notice bundle' '====================================================' "Repository: $GITHUB_REPOSITORY" "Commit: $CANDIDATE_SHA" 'Configuration: debugRuntimeClasspath' ''
+            cat NOTICE
+            printf '\nResolved dependency graph\n=========================\n'
+            cat release-notices/debugRuntimeClasspath.txt
+          } > release-notices/THIRD-PARTY-NOTICES.txt
+          test -s release-notices/THIRD-PARTY-NOTICES.txt
+      - name: Publish automated prerelease
+        uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 # v2.3.3
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ env.CANDIDATE_SHA }}
+          name: Automated main build ${{ env.CANDIDATE_SHA }}
+          prerelease: true
+          overwrite_files: true
+          generate_release_notes: false
+          body: |
+            Automated debug APK from a successful Android baseline on `main`.
+
+            This build passed unit tests. It is not a phone-tested, device-gated, or human-reviewed release.
+          files: |
+            release-apk/app-debug.apk
+            release-apk/app-debug.apk.sha256
+            release-apk/apk-provenance.json
+            release-notices/THIRD-PARTY-NOTICES.txt
+            LICENSE
+            NOTICE

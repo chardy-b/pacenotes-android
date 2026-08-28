@@ -1,6 +1,6 @@
 # Public release checklist
 
-Complete this checklist before making the repository public and before every phone-test APK release.
+Complete the applicable section before making the repository public or publishing an APK.
 
 ## Repository visibility
 
@@ -9,6 +9,15 @@ Complete this checklist before making the repository public and before every pho
 3. Change repository visibility only after the public-release pull request is merged.
 4. Immediately configure the `phone-test-release` GitHub Environment with the approved maintainer as a required reviewer. The private-repository plan rejects required-reviewer rules; GitHub enables them after the repository becomes public.
 5. Read the environment back through GitHub settings or the API. Confirm the required reviewer and `prevent self-review` are enabled.
+
+## Automated main-build prerelease
+
+1. The Android baseline publishes a prerelease only after its `main` push build and unit tests succeed; pull requests cannot enter the publish job.
+2. The release downloads the unchanged baseline artifact rather than rebuilding the APK.
+3. Attach `app-debug.apk`, its SHA-256 checksum, `apk-provenance.json`, the resolved `debugRuntimeClasspath` third-party notice bundle, `LICENSE`, and `NOTICE`.
+4. An existing release tag must resolve to the exact merge commit; retries may replace the same release assets but never move a tag.
+5. Treat it as an automated debug build, not a phone-tested, device-gated, or human-reviewed release.
+6. Do not use it as evidence of device readiness or distribute it as an approved phone-test build.
 
 ## Phone-test APK release
 
