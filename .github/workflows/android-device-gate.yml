@@ -156,9 +156,7 @@ jobs:
             grep -Eq '(mResumedActivity|topResumedActivity|ResumedActivity).*com\.rich\.rallypacenotes/\.MainActivity' "$EVIDENCE_DIR/activity-state.txt";
             sleep 3;
             python3 .github/device-evidence/extract_screenshots.py .github/device-evidence/scenario-contract.json "$screenshot_dir" "$EVIDENCE_DIR";
-            python3 .github/device-evidence/validate_rendered_basemap.py \
-              "$EVIDENCE_DIR/wil-70-hosted-map-evidence-v1.png" \
-              "$EVIDENCE_DIR/wil-70-lifecycle-recreation-v1.png" > "$EVIDENCE_DIR/render-validation.json";
+            python3 .github/device-evidence/validate_rendered_basemap.py "$EVIDENCE_DIR/wil-70-hosted-map-evidence-v1.png" "$EVIDENCE_DIR/wil-70-lifecycle-recreation-v1.png" > "$EVIDENCE_DIR/render-validation.json";
             test -s "$EVIDENCE_DIR/app-window.xml";
             cp -R app/build/reports/androidTests "$EVIDENCE_DIR/androidTest-reports";
             sha256sum "$EVIDENCE_DIR/app-debug.apk" | cut -d' ' -f1 > "$EVIDENCE_DIR/app-debug.apk.sha256";
