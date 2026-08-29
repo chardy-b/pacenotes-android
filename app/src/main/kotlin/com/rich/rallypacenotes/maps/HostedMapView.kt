@@ -48,6 +48,7 @@ fun HostedMapView(
     var styleLoaded by remember { mutableStateOf(false) }
     var fullyRendered by remember { mutableStateOf(false) }
     var loadFailed by remember { mutableStateOf(false) }
+    var locationComponentActivated by remember { mutableStateOf(false) }
     val mapView = remember(context) {
         MapView(context).also { view ->
             view.onCreate(null)
@@ -100,8 +101,9 @@ fun HostedMapView(
                 LocationComponentActivationOptions.builder(context, activeStyle).build(),
             )
             activeMap.locationComponent.isLocationComponentEnabled = true
+            locationComponentActivated = true
             Log.i(TAG, "HOSTED_MAP_LOCATION_ENABLED")
-        } else {
+        } else if (locationComponentActivated) {
             activeMap.locationComponent.isLocationComponentEnabled = false
         }
     }
