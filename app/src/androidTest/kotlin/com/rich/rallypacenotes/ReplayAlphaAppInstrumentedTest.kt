@@ -94,7 +94,7 @@ class ReplayAlphaAppInstrumentedTest {
     private fun captureScenario(fileName: String) {
         composeTestRule.waitForIdle()
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val arguments = instrumentation.arguments
+        val arguments = InstrumentationRegistry.getArguments()
         val relativeOutputDir = arguments.getString("screenshot_output_dir")
             ?.trim()
             ?.takeUnless { it.isEmpty() }
