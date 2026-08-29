@@ -161,7 +161,8 @@ jobs:
             verified-device-evidence "$EXPECTED_SHA" "$EXPECTED_RUN_ID"
           test -s verified-device-evidence/index.json
           test -s verified-device-evidence/manifest.json
-          test "$(find verified-device-evidence -maxdepth 1 -type f -name '*.png' | wc -l)" -eq 5
+          python3 .github/device-evidence/validate_release_screenshots.py \
+            .github/device-evidence/scenario-contract.json verified-device-evidence
           cp verified-device-evidence/app-debug.apk "rally-pacenotes-${EXPECTED_SHA}-debug.apk"
       - name: Ensure release tag resolves to verified commit
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1

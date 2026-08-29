@@ -3,6 +3,7 @@ package com.rich.rallypacenotes
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -56,6 +57,32 @@ class ReplayAlphaAppInstrumentedTest {
         composeTestRule.onNodeWithContentDescription("geometry-only detected candidate")
             .assertIsDisplayed()
         captureScenario("wil-86-screenshot-evidence-v1.png")
+    }
+
+    @Test
+    fun wil70HostedMapFeatureScenarioCapturesContractScreenshot() {
+        composeTestRule.onNodeWithContentDescription("hosted MapLibre map").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("map attribution").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Enable location").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("current location status").assertIsDisplayed()
+        awaitHostedMapRendered()
+        captureScenario("wil-70-hosted-map-evidence-v1.png")
+    }
+
+    @Test
+    fun wil70LifecycleRecreationScenarioCapturesAfterResume() {
+        composeTestRule.activityRule.scenario.recreate()
+        composeTestRule.waitForIdle()
+        assertStatus("stopped", "0.0")
+        composeTestRule.onNodeWithContentDescription("hosted MapLibre map").assertIsDisplayed()
+        awaitHostedMapRendered()
+        captureScenario("wil-70-lifecycle-recreation-v1.png")
+    }
+
+    private fun awaitHostedMapRendered() {
+        composeTestRule.waitUntil(timeoutMillis = 30_000) {
+            composeTestRule.onAllNodesWithText("Map status: ready").fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     private fun assertStatus(status: String, distance: String) {
