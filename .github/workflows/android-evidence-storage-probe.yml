@@ -61,20 +61,42 @@ jobs:
         with:
           ref: ${{ needs.verify-input.outputs.commit_sha }}
           persist-credentials: false
-      - name: Verify exact SHA and baseline
+      - name: Verify exact SHA and await baseline
         env:
           EXPECTED_SHA: ${{ needs.verify-input.outputs.commit_sha }}
           GH_TOKEN: ${{ github.token }}
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/workflows/android-baseline.yml/runs?head_sha=$EXPECTED_SHA&status=completed&per_page=100" > baseline-runs.json
-          python3 - "$EXPECTED_SHA" baseline-runs.json <<'PY'
+          mkdir -p "$EVIDENCE_DIR"
+          for attempt in $(seq 1 20); do
+            gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/workflows/android-baseline.yml/runs?head_sha=$EXPECTED_SHA&status=completed&per_page=100" > baseline-runs.json
+            cp baseline-runs.json "$EVIDENCE_DIR/baseline-runs.json"
+            set +e
+            python3 - "$EXPECTED_SHA" baseline-runs.json <<'PY'
           import json, sys
           expected, path = sys.argv[1:]
           runs = [run for page in json.load(open(path)) for run in page["workflow_runs"]]
-          if not any(run["head_sha"] == expected and run["conclusion"] == "success" for run in runs):
-              raise SystemExit("no successful exact-SHA Android baseline run")
+          exact = [run for run in runs if run["head_sha"] == expected]
+          if any(run["conclusion"] == "success" for run in exact):
+              raise SystemExit(0)
+          if any(run["conclusion"] not in (None, "success") for run in exact):
+              raise SystemExit(2)
+          raise SystemExit(1)
           PY
+            result=$?
+            set -e
+            if [ "$result" -eq 0 ]; then
+              cp baseline-runs.json "$EVIDENCE_DIR/baseline-runs.json"
+              exit 0
+            fi
+            if [ "$result" -eq 2 ]; then
+              echo "exact-SHA Android baseline completed unsuccessfully" >&2
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "timed out waiting for a successful exact-SHA Android baseline" >&2
+          exit 1
       - name: Validate evidence label
         env:
           EVIDENCE_LABEL: ${{ inputs.evidence_label || 'WIL-70' }}
