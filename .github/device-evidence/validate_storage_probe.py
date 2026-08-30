@@ -75,7 +75,7 @@ def validate(root: pathlib.Path, test_application_id: str) -> dict[str, object]:
     require(TARGET_APPLICATION_ID in packages, "probe UI XML has no target-package window node")
     foreground_text = foreground.read_text(encoding="utf-8")
     foreground_pattern = re.compile(
-        r"^(?:mCurrentFocus|mResumedActivity|topResumedActivity|ResumedActivity)\s*[:=]\s*"
+        r"^\s*(?:mCurrentFocus|mResumedActivity|topResumedActivity|ResumedActivity)\s*[:=]\s*"
         r"(?:ActivityRecord\{(?:[0-9a-fA-F]+\s+)?|Window\{[^\s}]+\s+)u\d+\s+"
         r"(?:com\.rich\.rallypacenotes/\.MainActivity|com\.rich\.rallypacenotes/com\.rich\.rallypacenotes\.MainActivity)(?=\s|})"
     )

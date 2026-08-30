@@ -47,7 +47,7 @@ class ValidatorAdversarialTests(unittest.TestCase):
             validator.validate(make_probe(xml='<hierarchy><node package="other.app" /></hierarchy>'), TEST_PACKAGE)
 
     def test_api_35_resumed_activity_is_accepted(self) -> None:
-        root = make_probe(foreground="topResumedActivity=ActivityRecord{u0 com.rich.rallypacenotes/.MainActivity t12}")
+        root = make_probe(foreground="  topResumedActivity=ActivityRecord{3bef9fe u0 com.rich.rallypacenotes/.MainActivity t12}")
         self.assertEqual(validator.validate(root, TEST_PACKAGE)["target_package"], TARGET_PACKAGE)
 
     def test_api_35_resumed_activity_label_is_accepted(self) -> None:

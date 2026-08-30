@@ -19,6 +19,7 @@ on:
       - .github/device-evidence/run_storage_probe.sh
       - .github/workflows/android-evidence-storage-probe.yml
       - scripts/test_validate_storage_probe.py
+      - scripts/test_run_storage_probe_contract.py
 
 permissions:
   contents: read
@@ -123,7 +124,9 @@ jobs:
           profile: pixel_7_pro
           emulator-boot-timeout: 900
           cores: 2
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-window -no-snapshot -wipe-data -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: >-
             sh .github/device-evidence/run_storage_probe.sh
       - name: Upload probe evidence
