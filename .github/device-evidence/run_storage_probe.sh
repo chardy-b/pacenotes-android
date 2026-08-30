@@ -27,7 +27,7 @@ adb shell am start -W -n "$APPLICATION_ID/.MainActivity" > "$EVIDENCE_DIR/target
 ready=0
 for attempt in $(seq 1 10); do
   rm -f "$EVIDENCE_DIR/probe/foreground-window.txt" "$EVIDENCE_DIR/probe/target-pid.txt" "$EVIDENCE_DIR/probe/app-window.xml"
-  adb shell dumpsys window windows | grep 'mCurrentFocus' > "$EVIDENCE_DIR/probe/foreground-window.txt" || true
+  adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity|ResumedActivity' > "$EVIDENCE_DIR/probe/foreground-window.txt" || true;
   adb shell pidof "$APPLICATION_ID" > "$EVIDENCE_DIR/probe/target-pid.txt" || true
   remote_xml="/sdcard/wil-70-probe-window-$attempt.xml"
   adb shell rm -f "$remote_xml" || true

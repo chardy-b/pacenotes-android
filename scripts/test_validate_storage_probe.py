@@ -46,6 +46,29 @@ class ValidatorAdversarialTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "no target-package"):
             validator.validate(make_probe(xml='<hierarchy><node package="other.app" /></hierarchy>'), TEST_PACKAGE)
 
+    def test_api_35_resumed_activity_is_accepted(self) -> None:
+        root = make_probe(foreground="topResumedActivity=ActivityRecord{u0 com.rich.rallypacenotes/.MainActivity t12}")
+        self.assertEqual(validator.validate(root, TEST_PACKAGE)["target_package"], TARGET_PACKAGE)
+
+    def test_api_35_resumed_activity_label_is_accepted(self) -> None:
+        root = make_probe(foreground="ResumedActivity: ActivityRecord{u0 com.rich.rallypacenotes/.MainActivity t12}")
+        self.assertEqual(validator.validate(root, TEST_PACKAGE)["target_package"], TARGET_PACKAGE)
+
+    def test_foreground_target_text_outside_component_is_rejected(self) -> None:
+        foreground = "mResumedActivity=ActivityRecord{u0 other.app/.Home t12 com.rich.rallypacenotes/.MainActivity}"
+        with self.assertRaisesRegex(SystemExit, "foreground window"):
+            validator.validate(make_probe(foreground=foreground), TEST_PACKAGE)
+
+    def test_foreground_wrong_component_before_target_tuple_is_rejected(self) -> None:
+        foreground = "mResumedActivity=ActivityRecord{other.app/.Home u0 com.rich.rallypacenotes/.MainActivity t12}"
+        with self.assertRaisesRegex(SystemExit, "foreground window"):
+            validator.validate(make_probe(foreground=foreground), TEST_PACKAGE)
+
+    def test_foreground_component_suffix_is_rejected(self) -> None:
+        foreground = "mResumedActivity=ActivityRecord{u0 com.rich.rallypacenotes/.MainActivityEvil t12}"
+        with self.assertRaisesRegex(SystemExit, "foreground window"):
+            validator.validate(make_probe(foreground=foreground), TEST_PACKAGE)
+
     def test_wrong_foreground_activity_is_rejected(self) -> None:
         with self.assertRaisesRegex(SystemExit, "foreground window"):
             validator.validate(make_probe(foreground='mCurrentFocus=Window{u0 other.app/.Home}'), TEST_PACKAGE)

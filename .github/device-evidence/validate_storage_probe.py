@@ -3,6 +3,7 @@
 
 import json
 import pathlib
+import re
 import struct
 import sys
 import xml.etree.ElementTree as element_tree
@@ -72,11 +73,15 @@ def validate(root: pathlib.Path, test_application_id: str) -> dict[str, object]:
     tree = element_tree.parse(hierarchy)
     packages = {node.attrib.get("package") for node in tree.iter()}
     require(TARGET_APPLICATION_ID in packages, "probe UI XML has no target-package window node")
+    foreground_text = foreground.read_text(encoding="utf-8")
+    foreground_pattern = re.compile(
+        r"^(?:mCurrentFocus|mResumedActivity|topResumedActivity|ResumedActivity)\s*[:=]\s*"
+        r"(?:ActivityRecord\{(?:[0-9a-fA-F]+\s+)?|Window\{[^\s}]+\s+)u\d+\s+"
+        r"(?:com\.rich\.rallypacenotes/\.MainActivity|com\.rich\.rallypacenotes/com\.rich\.rallypacenotes\.MainActivity)(?=\s|})"
+    )
     require(
-        f"mCurrentFocus" in foreground.read_text(encoding="utf-8")
-        and TARGET_APPLICATION_ID in foreground.read_text(encoding="utf-8")
-        and "MainActivity" in foreground.read_text(encoding="utf-8"),
-        "foreground window was not the target MainActivity",
+        any(foreground_pattern.search(line) is not None for line in foreground_text.splitlines()),
+        "probe foreground window did not identify target MainActivity",
     )
     require(pid.read_text(encoding="utf-8").strip().isdigit(), "target process PID was not observed")
     fields = parse_identity(identity)
