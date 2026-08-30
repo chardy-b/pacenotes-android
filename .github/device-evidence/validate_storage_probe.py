@@ -15,6 +15,7 @@ IDENTITY_KEYS = {
     "captured_after_instrumentation",
     "target_package",
     "test_package",
+    "head_sha",
 }
 
 
@@ -61,13 +62,30 @@ def parse_identity(path: pathlib.Path) -> dict[str, str]:
     return fields
 
 
+def parse_run_provenance(path: pathlib.Path, head_sha: str) -> dict[str, object]:
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise SystemExit(f"invalid probe run provenance: {error}")
+    require(isinstance(record, dict), "probe run provenance must be an object")
+    required = {"schema_version", "repository", "workflow_run_id", "workflow_run_attempt", "head_sha", "checkout_sha"}
+    require(set(record) == required, "probe run provenance has missing or unknown fields")
+    require(record["schema_version"] == 1, "unsupported probe run provenance schema")
+    require(record["repository"] == "chardy-b/pacenotes-android", "probe run provenance has wrong repository")
+    require(isinstance(record["workflow_run_id"], str) and record["workflow_run_id"].isdigit(), "probe run provenance has invalid workflow run ID")
+    require(isinstance(record["workflow_run_attempt"], str) and record["workflow_run_attempt"].isdigit(), "probe run provenance has invalid workflow run attempt")
+    require(record["head_sha"] == head_sha and record["checkout_sha"] == head_sha, "probe run provenance did not bind the exact head SHA")
+    return record
+
+
 def validate(root: pathlib.Path, test_application_id: str) -> dict[str, object]:
     screenshot = root / "probe.png"
     hierarchy = root / "app-window.xml"
     identity = root / "identity.txt"
     foreground = root / "foreground-window.txt"
     pid = root / "target-pid.txt"
-    for path in (screenshot, hierarchy, identity, foreground, pid):
+    run_provenance = root / "run-provenance.json"
+    for path in (screenshot, hierarchy, identity, foreground, pid, run_provenance):
         require(path.is_file() and path.stat().st_size > 0, f"missing or empty probe file: {path.name}")
     validate_png(screenshot)
     tree = element_tree.parse(hierarchy)
@@ -89,7 +107,9 @@ def validate(root: pathlib.Path, test_application_id: str) -> dict[str, object]:
     require(fields["target_package"] == TARGET_APPLICATION_ID, "probe identity did not record the target package")
     require(fields["capture_source"] == "adb-post-instrumentation", "probe did not use ADB post-instrumentation capture")
     require(fields["captured_after_instrumentation"] == "true", "probe was not marked post-instrumentation")
-    return {**fields, "screenshot_bytes": screenshot.stat().st_size, "ui_xml_bytes": hierarchy.stat().st_size}
+    require(bool(fields["head_sha"]) and re.fullmatch(r"[0-9a-f]{40}", fields["head_sha"]) is not None, "probe identity did not record a full head SHA")
+    provenance = parse_run_provenance(run_provenance, fields["head_sha"])
+    return {**fields, "workflow_run_id": provenance["workflow_run_id"], "screenshot_bytes": screenshot.stat().st_size, "ui_xml_bytes": hierarchy.stat().st_size}
 
 
 def main() -> None:

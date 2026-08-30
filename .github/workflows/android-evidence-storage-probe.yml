@@ -58,6 +58,8 @@ jobs:
     needs: verify-input
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      EXPECTED_SHA: ${{ needs.verify-input.outputs.commit_sha }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:

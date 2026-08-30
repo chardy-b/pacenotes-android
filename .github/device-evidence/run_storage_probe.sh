@@ -105,6 +105,35 @@ adb shell pm path "$APPLICATION_ID" > "$EVIDENCE_DIR/target-package-before-captu
 test -s "$EVIDENCE_DIR/target-package-before-capture.txt"
 grep -q '^package:/data/app/' "$EVIDENCE_DIR/target-package-before-capture.txt"
 adb exec-out screencap -p > "$EVIDENCE_DIR/probe/probe.png"
-printf 'capture_source=adb-post-instrumentation\ncaptured_after_instrumentation=true\ntarget_package=%s\ntest_package=%s\n' "$APPLICATION_ID" "$TEST_APPLICATION_ID" > "$EVIDENCE_DIR/probe/identity.txt"
+printf 'capture_source=adb-post-instrumentation\ncaptured_after_instrumentation=true\ntarget_package=%s\ntest_package=%s\nhead_sha=%s\n' "$APPLICATION_ID" "$TEST_APPLICATION_ID" "$EXPECTED_SHA" > "$EVIDENCE_DIR/probe/identity.txt"
+python3 - "$EVIDENCE_DIR/probe/run-provenance.json" <<'PY'
+import json
+import os
+import re
+import subprocess
+import sys
+
+head_sha = os.environ["EXPECTED_SHA"]
+if not re.fullmatch(r"[0-9a-f]{40}", head_sha):
+    raise SystemExit("EXPECTED_SHA must be a full lowercase commit SHA")
+checkout_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+if checkout_sha != head_sha:
+    raise SystemExit("checkout SHA did not match EXPECTED_SHA")
+run_id = os.environ["GITHUB_RUN_ID"]
+if not run_id.isdigit():
+    raise SystemExit("GITHUB_RUN_ID must be numeric")
+json.dump(
+    {
+        "schema_version": 1,
+        "repository": os.environ["GITHUB_REPOSITORY"],
+        "workflow_run_id": run_id,
+        "workflow_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+        "head_sha": head_sha,
+        "checkout_sha": checkout_sha,
+    },
+    open(sys.argv[1], "w", encoding="utf-8"),
+    sort_keys=True,
+)
+PY
 python3 .github/device-evidence/validate_storage_probe.py "$EVIDENCE_DIR/probe" "$TEST_APPLICATION_ID" > "$EVIDENCE_DIR/validation.json"
 cp -R app/build/reports/androidTests "$EVIDENCE_DIR/androidTest-reports"

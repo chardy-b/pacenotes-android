@@ -13,6 +13,7 @@ SPEC.loader.exec_module(validator)
 
 TEST_PACKAGE = "com.rich.rallypacenotes.test"
 TARGET_PACKAGE = "com.rich.rallypacenotes"
+HEAD_SHA = "a" * 40
 
 
 def png_chunk(kind: bytes, payload: bytes) -> bytes:
@@ -29,7 +30,11 @@ def make_probe(identity: str | None = None, xml: str | None = None, foreground: 
     (root / "app-window.xml").write_text(xml or f'<hierarchy><node package="{TARGET_PACKAGE}" /></hierarchy>', encoding="utf-8")
     (root / "foreground-window.txt").write_text(foreground or f'mCurrentFocus=Window{{x u0 {TARGET_PACKAGE}/.MainActivity}}', encoding="utf-8")
     (root / "target-pid.txt").write_text("1234\n", encoding="utf-8")
-    (root / "identity.txt").write_text(identity or "capture_source=adb-post-instrumentation\ncaptured_after_instrumentation=true\ntarget_package=com.rich.rallypacenotes\ntest_package=com.rich.rallypacenotes.test\n", encoding="utf-8")
+    (root / "identity.txt").write_text(identity or f"capture_source=adb-post-instrumentation\ncaptured_after_instrumentation=true\ntarget_package={TARGET_PACKAGE}\ntest_package={TEST_PACKAGE}\nhead_sha={HEAD_SHA}\n", encoding="utf-8")
+    (root / "run-provenance.json").write_text(
+        '{"checkout_sha":"' + HEAD_SHA + '","head_sha":"' + HEAD_SHA + '","repository":"chardy-b/pacenotes-android","schema_version":1,"workflow_run_attempt":"1","workflow_run_id":"12345"}',
+        encoding="utf-8",
+    )
     return root
 
 
@@ -38,7 +43,7 @@ class ValidatorAdversarialTests(unittest.TestCase):
         self.assertEqual(validator.validate(make_probe(), TEST_PACKAGE)["capture_source"], "adb-post-instrumentation")
 
     def test_non_adb_capture_source_is_rejected(self) -> None:
-        root = make_probe(identity="capture_source=test-owned-storage\ncaptured_after_instrumentation=true\ntarget_package=com.rich.rallypacenotes\ntest_package=com.rich.rallypacenotes.test\n")
+        root = make_probe(identity=f"capture_source=test-owned-storage\ncaptured_after_instrumentation=true\ntarget_package={TARGET_PACKAGE}\ntest_package={TEST_PACKAGE}\nhead_sha={HEAD_SHA}\n")
         with self.assertRaisesRegex(SystemExit, "ADB post-instrumentation"):
             validator.validate(root, TEST_PACKAGE)
 
@@ -68,6 +73,15 @@ class ValidatorAdversarialTests(unittest.TestCase):
         foreground = "mResumedActivity=ActivityRecord{u0 com.rich.rallypacenotes/.MainActivityEvil t12}"
         with self.assertRaisesRegex(SystemExit, "foreground window"):
             validator.validate(make_probe(foreground=foreground), TEST_PACKAGE)
+
+    def test_mismatched_run_provenance_sha_is_rejected(self) -> None:
+        root = make_probe()
+        (root / "run-provenance.json").write_text(
+            '{"checkout_sha":"' + ("b" * 40) + '","head_sha":"' + HEAD_SHA + '","repository":"chardy-b/pacenotes-android","schema_version":1,"workflow_run_attempt":"1","workflow_run_id":"12345"}',
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(SystemExit, "exact head SHA"):
+            validator.validate(root, TEST_PACKAGE)
 
     def test_wrong_foreground_activity_is_rejected(self) -> None:
         with self.assertRaisesRegex(SystemExit, "foreground window"):
