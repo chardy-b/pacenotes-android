@@ -30,7 +30,7 @@ concurrency:
 env:
   APPLICATION_ID: com.rich.rallypacenotes
   TEST_APPLICATION_ID: com.rich.rallypacenotes.test
-  PROBE_DEVICE_DIR: /storage/emulated/0/Android/data/com.rich.rallypacenotes.test/files/factory-evidence/wil-70-probe
+
   EVIDENCE_DIR: evidence-storage-probe
 
 jobs:
@@ -125,17 +125,32 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: >-
             set -eu;
-            mkdir -p "$EVIDENCE_DIR";
-            collect() { status=$?; adb logcat -d -t 1500 > "$EVIDENCE_DIR/device-logcat.txt" || true; adb shell pm path "$APPLICATION_ID" > "$EVIDENCE_DIR/target-package-after.txt" || true; adb shell pm path "$TEST_APPLICATION_ID" > "$EVIDENCE_DIR/test-package-after.txt" || true; adb shell ls -la "$PROBE_DEVICE_DIR" > "$EVIDENCE_DIR/probe-directory-after.txt" || true; printf 'exit_status=%s\n' "$status" > "$EVIDENCE_DIR/status.txt"; exit "$status"; };
+            mkdir -p "$EVIDENCE_DIR/probe";
+            collect() { status=$?; adb logcat -d -t 1500 > "$EVIDENCE_DIR/device-logcat.txt" || true; adb shell pm path "$APPLICATION_ID" > "$EVIDENCE_DIR/target-package-after.txt" || true; adb shell pm path "$TEST_APPLICATION_ID" > "$EVIDENCE_DIR/test-package-after.txt" || true; adb shell pidof "$APPLICATION_ID" > "$EVIDENCE_DIR/target-pid-after.txt" || true; printf 'exit_status=%s\n' "$status" > "$EVIDENCE_DIR/status.txt"; exit "$status"; };
             trap collect EXIT;
-            adb shell rm -rf "$PROBE_DEVICE_DIR";
-            ./gradlew --no-daemon --stacktrace :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.rich.rallypacenotes.ReplayAlphaAppInstrumentedTest#wil70EvidenceStorageProbeWritesDurableTestOwnedExport > "$EVIDENCE_DIR/instrumentation-output.txt" 2>&1;
-            adb shell pm path "$TEST_APPLICATION_ID" > "$EVIDENCE_DIR/test-package-before-pull.txt";
-            test -s "$EVIDENCE_DIR/test-package-before-pull.txt";
-            grep -q '^package:/data/app/' "$EVIDENCE_DIR/test-package-before-pull.txt";
-            adb shell ls -la "$PROBE_DEVICE_DIR" > "$EVIDENCE_DIR/probe-directory-before-pull.txt";
-            adb pull "$PROBE_DEVICE_DIR" "$EVIDENCE_DIR/probe" > "$EVIDENCE_DIR/pull-output.txt";
-            python3 .github/device-evidence/validate_storage_probe.py "$EVIDENCE_DIR/probe" "$TEST_APPLICATION_ID" "$PROBE_DEVICE_DIR" > "$EVIDENCE_DIR/validation.json";
+            ./gradlew --no-daemon --stacktrace :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.rich.rallypacenotes.ReplayAlphaAppInstrumentedTest#wil70PostInstrumentationEvidenceProbeHasReadyMap > "$EVIDENCE_DIR/instrumentation-output.txt" 2>&1;
+            adb shell am force-stop "$APPLICATION_ID";
+            adb shell am start -W -n "$APPLICATION_ID/.MainActivity" > "$EVIDENCE_DIR/target-launch.txt";
+            ready=0;
+            for attempt in $(seq 1 10); do
+              rm -f "$EVIDENCE_DIR/probe/foreground-window.txt" "$EVIDENCE_DIR/probe/target-pid.txt" "$EVIDENCE_DIR/probe/app-window.xml";
+              adb shell dumpsys window windows | grep 'mCurrentFocus' > "$EVIDENCE_DIR/probe/foreground-window.txt" || true;
+              adb shell pidof "$APPLICATION_ID" > "$EVIDENCE_DIR/probe/target-pid.txt" || true;
+              remote_xml="/sdcard/wil-70-probe-window-$attempt.xml";
+              adb shell rm -f "$remote_xml" || true;
+              adb shell uiautomator dump "$remote_xml" >/dev/null || true;
+              adb exec-out cat "$remote_xml" > "$EVIDENCE_DIR/probe/app-window.xml" || true;
+              adb shell rm -f "$remote_xml" || true;
+              if test -s "$EVIDENCE_DIR/probe/foreground-window.txt" && test -s "$EVIDENCE_DIR/probe/target-pid.txt" && test -s "$EVIDENCE_DIR/probe/app-window.xml" && grep -q "$APPLICATION_ID/.MainActivity" "$EVIDENCE_DIR/probe/foreground-window.txt" && grep -q 'Map status: ready' "$EVIDENCE_DIR/probe/app-window.xml"; then ready=1; break; fi;
+              sleep 3;
+            done;
+            test "$ready" -eq 1;
+            adb shell pm path "$APPLICATION_ID" > "$EVIDENCE_DIR/target-package-before-capture.txt";
+            test -s "$EVIDENCE_DIR/target-package-before-capture.txt";
+            grep -q '^package:/data/app/' "$EVIDENCE_DIR/target-package-before-capture.txt";
+            adb exec-out screencap -p > "$EVIDENCE_DIR/probe/probe.png";
+            printf 'capture_source=adb-post-instrumentation\ncaptured_after_instrumentation=true\ntarget_package=%s\ntest_package=%s\n' "$APPLICATION_ID" "$TEST_APPLICATION_ID" > "$EVIDENCE_DIR/probe/identity.txt";
+            python3 .github/device-evidence/validate_storage_probe.py "$EVIDENCE_DIR/probe" "$TEST_APPLICATION_ID" > "$EVIDENCE_DIR/validation.json";
             cp -R app/build/reports/androidTests "$EVIDENCE_DIR/androidTest-reports"
       - name: Upload probe evidence
         if: ${{ always() }}
