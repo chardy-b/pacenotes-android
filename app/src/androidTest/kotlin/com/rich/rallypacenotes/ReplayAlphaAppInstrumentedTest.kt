@@ -79,6 +79,38 @@ class ReplayAlphaAppInstrumentedTest {
         captureScenario("wil-70-lifecycle-recreation-v1.png")
     }
 
+    @Test
+    fun wil70EvidenceStorageProbeWritesDurableTestOwnedExport() {
+        composeTestRule.onNodeWithContentDescription("hosted MapLibre map").assertIsDisplayed()
+        awaitHostedMapRendered()
+
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val testContext = instrumentation.context
+        val root = checkNotNull(testContext.getExternalFilesDir("factory-evidence")) {
+            "test-owned external-files directory is unavailable"
+        }.canonicalFile
+        val outputDir = File(root, "wil-70-probe").canonicalFile
+        require(outputDir.toPath().startsWith(root.toPath())) {
+            "probe output directory escaped test-owned external storage"
+        }
+        outputDir.deleteRecursively()
+        check(outputDir.mkdirs()) { "cannot create probe output directory: $outputDir" }
+
+        val screenshot = File(outputDir, "probe.png").canonicalFile
+        val hierarchy = File(outputDir, "app-window.xml").canonicalFile
+        check(UiDevice.getInstance(instrumentation).takeScreenshot(screenshot)) {
+            "UiDevice.takeScreenshot failed for the durable-storage probe"
+        }
+        UiDevice.getInstance(instrumentation).dumpWindowHierarchy(hierarchy)
+        check(screenshot.isFile && screenshot.length() > 0) { "probe screenshot was empty" }
+        check(hierarchy.isFile && hierarchy.length() > 0) { "probe UI XML was empty" }
+        File(outputDir, "identity.txt").writeText(
+            "test_package=${testContext.packageName}\n" +
+                "target_package=${instrumentation.targetContext.packageName}\n" +
+                "output_dir=${outputDir.absolutePath}\n",
+        )
+    }
+
     private fun awaitHostedMapRendered() {
         composeTestRule.waitUntil(timeoutMillis = 30_000) {
             composeTestRule.onAllNodesWithText("Map status: ready").fetchSemanticsNodes().isNotEmpty()

@@ -1,0 +1,118 @@
+name: Android evidence storage probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Full 40-character commit SHA to verify
+        required: true
+        type: string
+      evidence_label:
+        description: Linear issue label
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: android-evidence-storage-probe-${{ inputs.commit_sha }}
+  cancel-in-progress: false
+
+env:
+  APPLICATION_ID: com.rich.rallypacenotes
+  TEST_APPLICATION_ID: com.rich.rallypacenotes.test
+  PROBE_DEVICE_DIR: /storage/emulated/0/Android/data/com.rich.rallypacenotes.test/files/factory-evidence/wil-70-probe
+  EVIDENCE_DIR: evidence-storage-probe
+
+jobs:
+  verify-input:
+    name: Validate requested commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      commit_sha: ${{ steps.validate.outputs.commit_sha }}
+    steps:
+      - id: validate
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          if ! printf '%s' "$REQUESTED_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "commit_sha must be a full lowercase 40-character Git commit SHA" >&2
+            exit 1
+          fi
+          echo "commit_sha=$REQUESTED_SHA" >> "$GITHUB_OUTPUT"
+
+  api-35-storage-probe:
+    name: API 35 durable evidence-storage probe
+    needs: verify-input
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.verify-input.outputs.commit_sha }}
+          persist-credentials: false
+      - name: Verify exact SHA and baseline
+        env:
+          EXPECTED_SHA: ${{ needs.verify-input.outputs.commit_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/workflows/android-baseline.yml/runs?head_sha=$EXPECTED_SHA&status=completed&per_page=100" > baseline-runs.json
+          python3 - "$EXPECTED_SHA" baseline-runs.json <<'PY'
+          import json, sys
+          expected, path = sys.argv[1:]
+          runs = [run for page in json.load(open(path)) for run in page["workflow_runs"]]
+          if not any(run["head_sha"] == expected and run["conclusion"] == "success" for run in runs):
+              raise SystemExit("no successful exact-SHA Android baseline run")
+          PY
+      - name: Validate evidence label
+        env:
+          EVIDENCE_LABEL: ${{ inputs.evidence_label }}
+        run: |
+          python3 -c 'import os,re; assert re.fullmatch(r"WIL-[1-9][0-9]*", os.environ["EVIDENCE_LABEL"]), "evidence_label must match WIL-[1-9][0-9]*"'
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@da187c8e6ffbd3802e00f2477aa5a822b25f2dda # v4.4.4
+      - name: Enable KVM acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run one API-35 durable-storage experiment
+        id: probe
+        uses: reactivecircus/android-emulator-runner@324029e2f414c084d8b15ba075288885e74aef9c # v2.34.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          emulator-boot-timeout: 900
+          cores: 2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: >-
+            set -eu;
+            mkdir -p "$EVIDENCE_DIR";
+            collect() { status=$?; adb logcat -d -t 1500 > "$EVIDENCE_DIR/device-logcat.txt" || true; adb shell pm path "$APPLICATION_ID" > "$EVIDENCE_DIR/target-package-after.txt" || true; adb shell pm path "$TEST_APPLICATION_ID" > "$EVIDENCE_DIR/test-package-after.txt" || true; adb shell ls -la "$PROBE_DEVICE_DIR" > "$EVIDENCE_DIR/probe-directory-after.txt" || true; printf 'exit_status=%s\n' "$status" > "$EVIDENCE_DIR/status.txt"; exit "$status"; };
+            trap collect EXIT;
+            adb shell rm -rf "$PROBE_DEVICE_DIR";
+            ./gradlew --no-daemon --stacktrace :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.rich.rallypacenotes.ReplayAlphaAppInstrumentedTest#wil70EvidenceStorageProbeWritesDurableTestOwnedExport > "$EVIDENCE_DIR/instrumentation-output.txt" 2>&1;
+            adb shell pm path "$TEST_APPLICATION_ID" > "$EVIDENCE_DIR/test-package-before-pull.txt";
+            test -s "$EVIDENCE_DIR/test-package-before-pull.txt";
+            grep -q '^package:/data/app/' "$EVIDENCE_DIR/test-package-before-pull.txt";
+            adb shell ls -la "$PROBE_DEVICE_DIR" > "$EVIDENCE_DIR/probe-directory-before-pull.txt";
+            adb pull "$PROBE_DEVICE_DIR" "$EVIDENCE_DIR/probe" > "$EVIDENCE_DIR/pull-output.txt";
+            python3 .github/device-evidence/validate_storage_probe.py "$EVIDENCE_DIR/probe" "$TEST_APPLICATION_ID" "$PROBE_DEVICE_DIR" > "$EVIDENCE_DIR/validation.json";
+            cp -R app/build/reports/androidTests "$EVIDENCE_DIR/androidTest-reports"
+      - name: Upload probe evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-evidence-storage-probe-${{ needs.verify-input.outputs.commit_sha }}
+          path: evidence-storage-probe/
+          if-no-files-found: error
+          retention-days: 14
