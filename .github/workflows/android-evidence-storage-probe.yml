@@ -8,16 +8,23 @@ on:
         required: true
         type: string
       evidence_label:
-        description: Linear issue label
+        description: Linear issue or evidence label
         required: true
         type: string
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - app/src/androidTest/kotlin/com/rich/rallypacenotes/ReplayAlphaAppInstrumentedTest.kt
+      - .github/device-evidence/validate_storage_probe.py
+      - .github/workflows/android-evidence-storage-probe.yml
+      - scripts/test_validate_storage_probe.py
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: android-evidence-storage-probe-${{ inputs.commit_sha }}
+  group: android-evidence-storage-probe-${{ inputs.commit_sha || github.event.pull_request.head.sha }}
   cancel-in-progress: false
 
 env:
@@ -36,7 +43,7 @@ jobs:
     steps:
       - id: validate
         env:
-          REQUESTED_SHA: ${{ inputs.commit_sha }}
+          REQUESTED_SHA: ${{ inputs.commit_sha || github.event.pull_request.head.sha }}
         run: |
           if ! printf '%s' "$REQUESTED_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
             echo "commit_sha must be a full lowercase 40-character Git commit SHA" >&2
@@ -70,7 +77,7 @@ jobs:
           PY
       - name: Validate evidence label
         env:
-          EVIDENCE_LABEL: ${{ inputs.evidence_label }}
+          EVIDENCE_LABEL: ${{ inputs.evidence_label || 'WIL-70' }}
         run: |
           python3 -c 'import os,re; assert re.fullmatch(r"WIL-[1-9][0-9]*", os.environ["EVIDENCE_LABEL"]), "evidence_label must match WIL-[1-9][0-9]*"'
       - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
