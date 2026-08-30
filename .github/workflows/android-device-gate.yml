@@ -140,9 +140,13 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk;
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk;
             instrumentation_exit=0;
-            ./gradlew --no-daemon --stacktrace :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.screenshot_output_dir=wil-86-screenshots > "$EVIDENCE_DIR/instrumentation-output.txt" 2>&1 || instrumentation_exit=$?;
+            screenshot_dir=$(python3 -c "import json; print(json.load(open('.github/device-evidence/scenario-contract.json'))['screenshot_output_dir'])");
+            ./gradlew --no-daemon --stacktrace :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.screenshot_output_dir="$screenshot_dir" > "$EVIDENCE_DIR/instrumentation-output.txt" 2>&1 || instrumentation_exit=$?;
             test "$instrumentation_exit" -eq 0;
             grep -q 'BUILD SUCCESSFUL' "$EVIDENCE_DIR/instrumentation-output.txt";
+            python3 .github/device-evidence/extract_screenshots.py .github/device-evidence/scenario-contract.json "$screenshot_dir" "$EVIDENCE_DIR";
+            python3 .github/device-evidence/validate_rendered_basemap.py "$EVIDENCE_DIR/wil-70-hosted-map-evidence-v1.png" "$EVIDENCE_DIR/wil-70-lifecycle-recreation-v1.png" > "$EVIDENCE_DIR/render-validation.json";
+            test -s "$EVIDENCE_DIR/app-window.xml";
             adb install -r app/build/outputs/apk/debug/app-debug.apk;
             adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$APPLICATION_ID" > "$EVIDENCE_DIR/launch-resolution.txt";
             grep -Eq '^com\.rich\.rallypacenotes/(\.MainActivity|com\.rich\.rallypacenotes\.MainActivity)$' "$EVIDENCE_DIR/launch-resolution.txt";
@@ -154,12 +158,9 @@ jobs:
             adb shell dumpsys activity activities > "$EVIDENCE_DIR/activity-state.txt";
             grep -Eq '(mResumedActivity|topResumedActivity|ResumedActivity).*com\.rich\.rallypacenotes/\.MainActivity' "$EVIDENCE_DIR/activity-state.txt";
             sleep 3;
-            for screenshot in launch-stopped-v1.png running-v1.png paused-v1.png reset-v1.png wil-86-screenshot-evidence-v1.png; do adb exec-out run-as "$APPLICATION_ID" cat "files/wil-86-screenshots/$screenshot" > "$EVIDENCE_DIR/$screenshot"; test -s "$EVIDENCE_DIR/$screenshot"; done;
-            adb exec-out run-as "$APPLICATION_ID" cat files/wil-86-screenshots/app-window.xml > "$EVIDENCE_DIR/app-window.xml";
-            test -s "$EVIDENCE_DIR/app-window.xml";
             cp -R app/build/reports/androidTests "$EVIDENCE_DIR/androidTest-reports";
             sha256sum "$EVIDENCE_DIR/app-debug.apk" | cut -d' ' -f1 > "$EVIDENCE_DIR/app-debug.apk.sha256";
-            python3 -c "import hashlib,json,os,pathlib; d=pathlib.Path(os.environ['EVIDENCE_DIR']); apk=d/'app-debug.apk'; baseline=json.load(open(d/'baseline-provenance.json')); device={'repository':os.environ['GITHUB_REPOSITORY'],'workflow':os.environ['GITHUB_WORKFLOW'],'commit':os.environ['EXPECTED_SHA'],'run_id':int(os.environ['GITHUB_RUN_ID']),'run_attempt':int(os.environ['GITHUB_RUN_ATTEMPT']),'profile_version':'phone-replay-v1','schema_version':'wil-86-evidence-v1','api_level':int(os.environ['DEVICE_API_LEVEL']),'emulator_profile':os.environ['DEVICE_PROFILE'],'apk_size_bytes':apk.stat().st_size,'apk_sha256':hashlib.sha256(apk.read_bytes()).hexdigest()}; (d/'provenance.json').write_text(json.dumps({'baseline':baseline,'device_gate':device},indent=2,sort_keys=True)+'\\n')";
+            python3 -c "import hashlib,json,os,pathlib; d=pathlib.Path(os.environ['EVIDENCE_DIR']); apk=d/'app-debug.apk'; baseline=json.load(open(d/'baseline-provenance.json')); contract=json.load(open('.github/device-evidence/scenario-contract.json')); device={'repository':os.environ['GITHUB_REPOSITORY'],'workflow':os.environ['GITHUB_WORKFLOW'],'commit':os.environ['EXPECTED_SHA'],'run_id':int(os.environ['GITHUB_RUN_ID']),'run_attempt':int(os.environ['GITHUB_RUN_ATTEMPT']),'profile_version':contract['profile_version'],'schema_version':contract['schema_version'],'api_level':int(os.environ['DEVICE_API_LEVEL']),'emulator_profile':os.environ['DEVICE_PROFILE'],'apk_size_bytes':apk.stat().st_size,'apk_sha256':hashlib.sha256(apk.read_bytes()).hexdigest()}; (d/'provenance.json').write_text(json.dumps({'baseline':baseline,'device_gate':device},indent=2,sort_keys=True)+'\\n')";
             python3 .github/device-evidence/generate_index.py .github/device-evidence/scenario-contract.json "$EVIDENCE_DIR" --provenance "$EVIDENCE_DIR/provenance.json" --apk app-debug.apk;
             python3 .github/device-evidence/validate_evidence.py .github/device-evidence/scenario-contract.json "$EVIDENCE_DIR" "$EXPECTED_SHA" "$GITHUB_RUN_ID";
             test -s "$EVIDENCE_DIR/index.json";
@@ -212,6 +213,6 @@ jobs:
             echo "- [ ] Instrumentation output reports success."
             echo "- [ ] \`app-launched.png\` shows Rally Pacenotes, not launcher/system UI."
             echo "- [ ] Ticket-required screenshots and states were captured or attached by the ticket-specific test."
-            echo "- [ ] Five contract PNGs, XML/log diagnostics, device state, APK checksum, and manifest match this run."
+            echo "- [ ] Contract-required PNGs, XML/log diagnostics, device state, APK checksum, and manifest match this run."
             echo "- [ ] Human visual review is complete before any phone-test release."
           } >> "$GITHUB_STEP_SUMMARY"

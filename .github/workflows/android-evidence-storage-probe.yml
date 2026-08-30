@@ -1,0 +1,141 @@
+name: Android evidence storage probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Full 40-character commit SHA to verify
+        required: true
+        type: string
+      evidence_label:
+        description: Linear issue or evidence label
+        required: true
+        type: string
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - app/src/androidTest/kotlin/com/rich/rallypacenotes/ReplayAlphaAppInstrumentedTest.kt
+      - .github/device-evidence/validate_storage_probe.py
+      - .github/device-evidence/run_storage_probe.sh
+      - .github/workflows/android-evidence-storage-probe.yml
+      - scripts/test_validate_storage_probe.py
+      - scripts/test_run_storage_probe_contract.py
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: android-evidence-storage-probe-${{ inputs.commit_sha || github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+env:
+  APPLICATION_ID: com.rich.rallypacenotes
+  TEST_APPLICATION_ID: com.rich.rallypacenotes.test
+
+  EVIDENCE_DIR: evidence-storage-probe
+
+jobs:
+  verify-input:
+    name: Validate requested commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      commit_sha: ${{ steps.validate.outputs.commit_sha }}
+    steps:
+      - id: validate
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha || github.event.pull_request.head.sha }}
+        run: |
+          if ! printf '%s' "$REQUESTED_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "commit_sha must be a full lowercase 40-character Git commit SHA" >&2
+            exit 1
+          fi
+          echo "commit_sha=$REQUESTED_SHA" >> "$GITHUB_OUTPUT"
+
+  api-35-storage-probe:
+    name: API 35 durable evidence-storage probe
+    needs: verify-input
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      EXPECTED_SHA: ${{ needs.verify-input.outputs.commit_sha }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.verify-input.outputs.commit_sha }}
+          persist-credentials: false
+      - name: Verify exact SHA and await baseline
+        env:
+          EXPECTED_SHA: ${{ needs.verify-input.outputs.commit_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          mkdir -p "$EVIDENCE_DIR"
+          for attempt in $(seq 1 20); do
+            gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/workflows/android-baseline.yml/runs?head_sha=$EXPECTED_SHA&status=completed&per_page=100" > baseline-runs.json
+            cp baseline-runs.json "$EVIDENCE_DIR/baseline-runs.json"
+            set +e
+            python3 - "$EXPECTED_SHA" baseline-runs.json <<'PY'
+          import json, sys
+          expected, path = sys.argv[1:]
+          runs = [run for page in json.load(open(path)) for run in page["workflow_runs"]]
+          exact = [run for run in runs if run["head_sha"] == expected]
+          if any(run["conclusion"] == "success" for run in exact):
+              raise SystemExit(0)
+          if any(run["conclusion"] not in (None, "success") for run in exact):
+              raise SystemExit(2)
+          raise SystemExit(1)
+          PY
+            result=$?
+            set -e
+            if [ "$result" -eq 0 ]; then
+              cp baseline-runs.json "$EVIDENCE_DIR/baseline-runs.json"
+              exit 0
+            fi
+            if [ "$result" -eq 2 ]; then
+              echo "exact-SHA Android baseline completed unsuccessfully" >&2
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "timed out waiting for a successful exact-SHA Android baseline" >&2
+          exit 1
+      - name: Validate evidence label
+        env:
+          EVIDENCE_LABEL: ${{ inputs.evidence_label || 'WIL-70' }}
+        run: |
+          python3 -c 'import os,re; assert re.fullmatch(r"WIL-[1-9][0-9]*", os.environ["EVIDENCE_LABEL"]), "evidence_label must match WIL-[1-9][0-9]*"'
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@da187c8e6ffbd3802e00f2477aa5a822b25f2dda # v4.4.4
+      - name: Enable KVM acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run one API-35 durable-storage experiment
+        id: probe
+        uses: reactivecircus/android-emulator-runner@324029e2f414c084d8b15ba075288885e74aef9c # v2.34.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          emulator-boot-timeout: 900
+          cores: 2
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-window -no-snapshot -wipe-data -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: >-
+            sh .github/device-evidence/run_storage_probe.sh
+      - name: Upload probe evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-evidence-storage-probe-${{ needs.verify-input.outputs.commit_sha }}
+          path: evidence-storage-probe/
+          if-no-files-found: error
+          retention-days: 14
