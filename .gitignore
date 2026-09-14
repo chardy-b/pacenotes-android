@@ -29,8 +29,14 @@ __pycache__/
 # Local Hermes execution ledgers and plans
 .hermes/
 
+# Local controller execution state
+.hermes/execution/
+
 # Generated local map packages and source extracts (retain provenance manifests only)
 local-maps/
 *.mbtiles
 *.pmtiles
 *.osm.pbf
+
+# Kotlin compiler workspace
+.kotlin/

@@ -1,6 +1,6 @@
 # Project Status
 
-> **Last updated:** 2026-08-01
+> **Last updated:** 2026-08-14
 > **Phase:** Replay Alpha is buildable and launchable; physical-device validation remains pending.
 > **Overall state:** No Mapbox credential is required for V1. The active scope is a local-GPX route-following pacenote companion, not general navigation.
 
@@ -20,10 +20,11 @@
 - [x] First provider-neutral TDD slice: `GeoPoint` and immutable `RouteGeometry` invariants, including defensive input-list copying; Luna RED→GREEN evidence and Sol re-review passed.
 - [x] Provider-neutral route state slice: validated `RouteRevision` and `MatchedRoutePosition`; explicit navigation statuses/progress invariants; and deterministic, caller-independent pacenote event IDs. Focused RED→GREEN tests and full JVM/debug-APK verification passed.
 - [x] Pure `pacenotes` geometry foundation: stable spherical distance, initial heading, wrap-safe signed heading deltas, and typed metre-spaced route normalization with conservative discontinuity suppression. Focused tests and full relevant Gradle verification passed.
+- [ ] WIL-10 conservative curve classifier implementation and static-review candidate: pure app-owned normalized geometry candidate detection with synthetic fixtures for straight, gentle/sharp, S-bend, noise, junction-like, and roundabout-like geometry; span boundaries and exact severity mapping are covered. The rebased candidate has not run authoritative baseline CI on its final exact head; completion and unblocking await that fresh CI result. Local Android SDK remains unavailable, and no physical-device or instrumentation validation is claimed.
 
 ## Not started
 
-- [ ] GPX parser/qualification, geometry classifier, deterministic replay, stateful location matcher, UI, speech, foreground service, and field test.
+- [ ] GPX parser/qualification, deterministic replay, stateful location matcher, UI, speech, foreground service, and field test.
 
 ## Current blockers / required inputs
 
@@ -35,9 +36,11 @@
 
 ## Immediate next action
 
-**P0-05: Plan conservative curve detection/classification using the completed pure geometry foundation.**
+**P0-06: Add the stateful GPX location matcher and route-revision handling.**
 
-Start from [`docs/plans/2026-08-01-p0-04-geometry-normalization.md`](plans/2026-08-01-p0-04-geometry-normalization.md). Create P0-05’s own exact test strategy and classifier-threshold documentation before production code; it must suppress uncertain/noisy geometry and never imply safe speed.
+P0-06 remains blocked pending authoritative baseline CI for the final exact WIL-10 head. Local Android SDK access remains unavailable, and no physical-device or instrumentation validation is claimed.
+
+Carry forward the classifier contract: geometry-only candidate detection, suppression of candidates over 250 m or containing any step over 60°, and no claims of topology/junction recognition, GPS, map/provider data, speed, hazards, phrases, or event IDs. Direct regression coverage distinguishes an accepted exact 60° step from a rejected step greater than 60°.
 
 Do not add Mapbox, public OSM tiles, OSRM demo endpoints, Google Play Services, `INTERNET` permission, credentials, or secret configuration to V1.
 
