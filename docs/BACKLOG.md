@@ -15,8 +15,8 @@
 | P0-02 | Record the credential-free GPX runtime decision; update charter/status/safety wording | P0-01 | 4k–8k | ADR, scope, and README describe a GPX route-following companion rather than ordinary navigation. |
 | P0-03 | ✅ Create provider-neutral route/progress/pacenote domain models | P0-01 | 10k–18k | Completed 2026-08-01: unit tests cover model invariants and deterministic IDs. |
 | P0-04 | ✅ Implement geometry normalization and distance/heading primitives | P0-03 | 16k–28k | Completed 2026-08-01: pure geometry module, stable meter projection, heading primitives, fixed-distance resampling, and discontinuity suppression are unit-tested. |
-| P0-05 | Build conservative curve detection/classification | P0-04 | 28k–45k | Tests cover straight, gentle/sharp, S-bend, digitization noise, junction, and roundabout-like fixtures. **Next.** |
-| P0-06 | Add stateful GPX location matcher and route-revision handling | P0-03 + P0-04 | 20k–35k | Simulated route-following session produces neutral progress; ambiguity/off-route pauses speech without invented rerouting. |
+| P0-05 | Build conservative curve detection/classification | P0-04 | 28k–45k | Implementation and static-review candidate exists with synthetic evidence, including exact-60° regression coverage. Completion awaits authoritative baseline CI on the final exact head; no physical-device instrumentation is claimed. |
+| P0-06 | Add stateful GPX location matcher and route-revision handling | P0-03 + P0-04 + P0-05 | 20k–35k | Simulated route-following session produces neutral progress; ambiguity/off-route pauses speech without invented rerouting. Blocked pending fresh authoritative baseline CI for WIL-10's final exact head. |
 | P0-07 | Implement original Compose theme and static navigation screen | P0-01 + P0-03 | 20k–35k | UI/semantics tests cover pacenote card, state bar, 200% font scale, and direction not-color-only. |
 | P0-08 | Implement phrase builder, speech scheduler, and TTS runtime | P0-03 + P0-06 | 18k–30k | Scheduler tests and device simulation demonstrate timely, non-duplicate calls. |
 | P0-09 | Add foreground navigation service and audio focus | P0-06 + P0-08 | 16k–28k | Physical-device screen-off/Bluetooth/audio-focus checklist passes. |
@@ -51,7 +51,7 @@ A backlog item may start only when:
 
 ## Definition of done
 
-1. Focused tests failed first and then pass; full relevant test suite passes.
+1. Focused tests failed first and then pass; full relevant test suite passes. For the rebased WIL-10 candidate, authoritative baseline CI on the final exact head is still pending; no CI completion is claimed here.
 2. Build/physical-device verification was actually run when applicable.
 3. No secret or local credential is tracked.
 4. Documentation, status, and decision records reflect a meaningful change.
