@@ -3,6 +3,7 @@ package com.rich.rallypacenotes
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -58,6 +59,40 @@ class ReplayAlphaAppInstrumentedTest {
         captureScenario("wil-86-screenshot-evidence-v1.png")
     }
 
+    @Test
+    fun wil70HostedMapFeatureScenarioCapturesContractScreenshot() {
+        composeTestRule.onNodeWithContentDescription("hosted MapLibre map").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("map attribution").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Enable location").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("current location status").assertIsDisplayed()
+        awaitHostedMapRendered()
+        captureScenario("wil-70-hosted-map-evidence-v1.png")
+    }
+
+    @Test
+    fun wil70LifecycleRecreationScenarioCapturesAfterResume() {
+        composeTestRule.activityRule.scenario.recreate()
+        composeTestRule.waitForIdle()
+        assertStatus("stopped", "0.0")
+        composeTestRule.onNodeWithContentDescription("hosted MapLibre map").assertIsDisplayed()
+        awaitHostedMapRendered()
+        captureScenario("wil-70-lifecycle-recreation-v1.png")
+    }
+
+    @Test
+    fun wil70PostInstrumentationEvidenceProbeHasReadyMap() {
+        composeTestRule.onNodeWithContentDescription("hosted MapLibre map").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("map attribution").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Enable location").assertIsDisplayed()
+        awaitHostedMapRendered()
+    }
+
+    private fun awaitHostedMapRendered() {
+        composeTestRule.waitUntil(timeoutMillis = 30_000) {
+            composeTestRule.onAllNodesWithText("Map status: ready").fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
     private fun assertStatus(status: String, distance: String) {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Status: $status | Current distance: $distance m")
@@ -67,7 +102,7 @@ class ReplayAlphaAppInstrumentedTest {
     private fun captureScenario(fileName: String) {
         composeTestRule.waitForIdle()
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val arguments = instrumentation.arguments
+        val arguments = InstrumentationRegistry.getArguments()
         val relativeOutputDir = arguments.getString("screenshot_output_dir")
             ?.trim()
             ?.takeUnless { it.isEmpty() }

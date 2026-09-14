@@ -24,6 +24,7 @@ Thumbs.db
 
 # Generated diagnostics
 *.log
+__pycache__/
 
 # Local Hermes execution ledgers and plans
 .hermes/
