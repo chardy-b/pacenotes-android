@@ -24,6 +24,10 @@ Thumbs.db
 
 # Generated diagnostics
 *.log
+__pycache__/
+
+# Local Hermes execution ledgers and plans
+.hermes/
 
 # Generated local map packages and source extracts (retain provenance manifests only)
 local-maps/
