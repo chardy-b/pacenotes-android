@@ -1,46 +1,34 @@
-# Pacenotes Development Workflow
+# Pacenotes Agent Context
 
-## Linear is the project source of truth
+## Sources of truth
 
-- **Linear project:** [Pacenotes](https://linear.app/wildhearts/project/pacenotes-87634b2bd822)
-- **Team:** `Wildhearts` (`WIL`)
-- Use Linear for every meaningful development task, lifecycle transition, blocker, and project update.
-- Repository documentation remains the technical source of record for design/ADRs, test strategy, and context-free handoff. Keep it consistent with Linear.
+- Linear Pacenotes project (`WIL`) owns scope, dependencies, status, and blockers.
+- Repository docs own architecture, test strategy, and durable technical decisions.
+- Read the active Linear issue before material work. Do not invent a ticket. If no real issue covers the work, stop and define one with actual scope and acceptance criteria.
 
-## Required task loop
+Historical plans, handoffs, and status records may preserve commands or results from earlier local Gradle runs. They are provenance, not current procedure: do not execute those commands locally. The GitHub Actions-only Gradle rule below supersedes them.
 
-1. Read the active Linear issue and relevant project document before editing code.
-2. If no issue represents the work, create one in the Pacenotes project with outcome, acceptance criteria, dependencies, risk/safety constraints, and a token-budget estimate.
-3. Mark the issue `In Progress` before material implementation.
-4. Follow strict TDD and all repository safety boundaries.
-5. Record real test/build/device evidence and any deviation or blocker in a Linear comment.
-6. Move an issue to `Done` only when its acceptance criteria and verification have actually passed.
-7. Post a Linear project status update at milestones, material decisions, delivery risks, scope changes, and blockers.
+## Build and delivery boundaries
 
-## GitHub delivery gates
+- Never run Gradle on the local host. GitHub Actions is the only Gradle execution environment.
+- Use a feature branch and pull request for material work; never push directly to `main` and never enable auto-merge.
+- Classify each change as baseline-only, device-gate-required, or release-requested.
+- Exact-head baseline CI must produce `app-debug.apk` and run the documented unit-test suites.
+- UI, permissions, location/GPS replay, foreground-service, audio/TTS, MapLibre, lifecycle, and other Android-runtime changes require API-35 device evidence on the same commit.
+- Device evidence must include the exact APK, required screenshots, UI XML, reports, logs, relevant device state, and commit/run/checksum metadata.
+- Phone-test prereleases publish the unchanged verified APK and required screenshots as GitHub prerelease assets; they never rebuild.
+- Record exact runs and artifacts in the PR and Linear. Mark Done only after every required gate passes.
 
-- Use a feature branch and pull request for all material work.
-- Do not push directly to `main`.
-- Do not enable auto-merge or merge a pull request without explicit user instruction.
-- The authoritative `Android baseline / build and unit tests` check must pass on the current PR head.
-- Baseline CI must build `app-debug.apk`, run unit-test suites for `app`, `core-model`, and `pacenotes`, and retain the APK as an Actions artifact.
-- Classify every change as **baseline-only**, **device gate required**, or **release requested** before delivery.
-- UI, permissions, location, GPS replay, foreground-service, audio/TTS, MapLibre, lifecycle, and other Android-runtime changes require a successful manual API-35 device gate on the same commit.
-- Device-gate evidence must include the exact APK, ticket-required screenshots, UI XML, test reports, logs, device state when applicable, and commit/run/checksum metadata.
-- Link exact Actions runs and artifacts in the PR and Linear issue.
-- Publish a phone-test prerelease only after deliberate human review of a successful device-gate artifact. The release workflow must publish that unchanged artifact and must not rebuild it.
-- Do not move a Linear issue to Done while a required gate is missing, stale, failed, or unreviewed.
-- Follow [`docs/PACENOTES-GITHUB-DELIVERY.md`](docs/PACENOTES-GITHUB-DELIVERY.md) for the exact delivery sequence.
+Teo may merge its own Pacenotes PR after applicable exact-head checks and self-review pass. Escalate to independent review for security, credential, public-exposure, destructive-migration, or concurrency-critical changes. Human merge remains allowed but is not a universal prerequisite.
 
-## Non-negotiable product boundaries
+An issue that explicitly opts into `docs/factory/` uses the stricter factory contract: separate verifier/integrator, recorded independence attestation, and Richard's Linear decision before merge or release. That opt-in factory policy overrides the general self-merge rule only for that factory run.
 
-- Pacenotes is a local-GPX route-following companion, not ordinary navigation, rerouting, speed advice, or a hazard system.
-- Do not put provider SDK types in `core-model` or `pacenotes`.
+Load `.agents/skills/pacenotes-delivery/SKILL.md` for the procedural workflow and `docs/PACENOTES-GITHUB-DELIVERY.md` for the complete evidence contract. The unchanged official Google Android skills are available through the scoped `androiddev` Hermes profile, not general-purpose profiles.
+
+## Product safety
+
+- Pacenotes follows local GPX routes; it is not ordinary navigation, rerouting, speed advice, or a hazard system.
+- Keep provider SDK types out of `core-model` and `pacenotes`.
 - Suppress or pause guidance when matching is uncertain, off-route, wrong-way, or ambiguous.
-- Do not claim speed, hazards, visibility, surface, crests, or jumps from route geometry.
-- Do not expose credentials or private data in source, logs, test fixtures, Linear, or chat.
-
-## Current priority
-
-- `WIL-10` — finish P0-05 conservative curve detection/classification acceptance coverage.
-- `WIL-17` — prove the local offline Northern California MapLibre basemap without runtime network access.
+- Never infer speed, hazards, visibility, surface, crests, or jumps from route geometry.
+- Never expose credentials or private data in source, logs, fixtures, Linear, or chat.

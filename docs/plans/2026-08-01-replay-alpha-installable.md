@@ -1,5 +1,7 @@
 # Replay Alpha Installable MVP Plan
 
+> **Historical execution note:** This plan preserves expected Gradle checks from before the CI-only policy. Do not execute Gradle locally; run equivalent tests and APK assembly through GitHub Actions on the exact head.
+
 > **For Hermes:** Execute with strict TDD for production behavior; use the Android QA skill for package/device evidence.
 
 **Goal:** Deliver the first installable, launchable, deterministic Replay Alpha: a tester launches the app, chooses a bundled synthetic route fixture, runs/pause/resets replay, sees geometry-derived curve candidates, and can evaluate the callouts without GPS or network access.

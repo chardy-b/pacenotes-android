@@ -17,7 +17,7 @@ When uncertain, use **device gate required**. A screenshot filename, semantic as
 1. Use the Linear issue identifier in the feature branch and PR title.
 2. Reconcile the branch against current `origin/main`.
 3. Run static checks that do not invoke Gradle locally, including workflow parsing and `git diff --check`.
-4. Obtain an independent skeptical review of the exact diff before pushing.
+4. Perform exact-diff self-review and apply the repository's risk-based review policy. Independent review is mandatory for security, credential, public-exposure, destructive-migration, or concurrency-critical changes.
 5. Push only the reviewed feature branch; never push directly to `main`.
 6. Open or update a PR targeting `main`. Do not enable auto-merge.
 
@@ -70,7 +70,7 @@ The release workflow must verify the source run, commit, workflow-ref SHA, artif
 
 ## 6. Merge and close
 
-Prepare the PR for human review, but do not merge without explicit user instruction. After a human merge:
+Teo may merge its own PR after applicable exact-head gates and self-review pass; elevated-risk changes also require independent review. Human merge remains allowed but is not a universal prerequisite. Auto-merge stays disabled. After merge:
 
 1. verify the merge commit on `main`;
 2. verify the authoritative baseline check on the merged ref;

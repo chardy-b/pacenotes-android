@@ -1,5 +1,7 @@
 # Initial QA Report — 2026-07-26
 
+> **Historical execution note:** The build and test results below are dated provenance, not reusable current evidence or procedure. Do not run Gradle locally; reproduce applicable checks through GitHub Actions on the exact head.
+
 ## Scope
 
 Initial validation of the credential-free Android scaffold and provider-neutral core model. This report does **not** claim user-interface, GPX import, replay, GPS, TTS, foreground-service, Bluetooth, or field-driving validation: those features do not exist yet.

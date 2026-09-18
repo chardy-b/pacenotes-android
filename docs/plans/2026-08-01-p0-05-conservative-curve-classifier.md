@@ -1,5 +1,7 @@
 # P0-05 Conservative Curve Classifier Implementation Plan
 
+> **Historical execution note:** This plan preserves commands from before the CI-only Gradle policy. Treat them as provenance and expected-check specifications; do not run Gradle locally. Execute equivalent Gradle checks only through GitHub Actions.
+
 > **For Hermes:** Execute task-by-task using `subagent-driven-development`; every production behavior follows `test-driven-development` RED → GREEN → REFACTOR.
 
 **Goal:** Convert a normalized local-GPX route into deterministic, conservative curve candidates, while suppressing noise, ambiguous geometry, and non-curve artifacts. This plan does **not** make speed, hazard, surface, visibility, crest, or safety claims.

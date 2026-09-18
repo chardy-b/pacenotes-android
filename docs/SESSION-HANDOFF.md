@@ -1,5 +1,7 @@
 # Context-Free Session Handoff
 
+> **Historical execution note:** Recorded local Gradle outcomes below are provenance only, not current procedure. Do not run Gradle locally; execute equivalent checks through GitHub Actions on the exact head.
+
 Use this document to resume the project without prior chat context.
 
 ## One-paragraph briefing
