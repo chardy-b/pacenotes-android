@@ -2,6 +2,8 @@
 
 Copy this file to `docs/factory/<WIL-ID>.md`. Replace every placeholder. Keep the linked Linear issue authoritative for lifecycle state.
 
+Using this template explicitly opts that issue into the stricter factory policy: independent verifier/integrator and Richard's recorded Linear decision are mandatory. This is not the repository-wide default; ordinary work follows [`../../AGENTS.md`](../../AGENTS.md).
+
 For each actual run, use one ledger path `docs/factory/runs/<WIL-ID>/<RUN-ID>.md` and one row in `docs/factory/runs/<WIL-ID>/INDEX.md`. The `RUN-ID` is exactly `YYYYMMDDTHHMMSSZ-<short-head>-NN`, with `NN` two-digit zero-padded from `01`. Before creating a record, read the index; for the same exact `started_utc` second and exact head choose one greater than the largest existing `NN`. Create record and row together in one PR/commit. Review/CI statically checks uniqueness. If concurrent branches allocate the same ID, the later-to-merge branch rebases, re-reads the index, allocates the next `NN`, and updates both filename and row before merge; no locking is claimed.
 
 ## Identity and lifecycle

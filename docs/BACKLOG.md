@@ -1,5 +1,7 @@
 # Product Backlog
 
+> **Current execution policy:** Any Gradle command shown below is historical or expected-check shorthand. Do not run it locally; execute the equivalent Gradle check only through GitHub Actions on the exact head.
+
 ## Operating rules
 
 - Work top to bottom unless a blocker prevents it.

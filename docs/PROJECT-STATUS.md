@@ -1,5 +1,7 @@
 # Project Status
 
+> **Historical execution note:** Local-toolchain and Gradle results below are retained as dated provenance, not current verification procedure. Do not run Gradle locally; re-establish applicable results through GitHub Actions on the exact head.
+
 > **Last updated:** 2026-08-14
 > **Phase:** Replay Alpha is buildable and launchable; physical-device validation remains pending.
 > **Overall state:** No Mapbox credential is required for V1. The active scope is a local-GPX route-following pacenote companion, not general navigation.

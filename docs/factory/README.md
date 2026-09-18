@@ -2,6 +2,8 @@
 
 This directory is the canonical repository record for factory contracts, evidence packets, and run ledgers. Linear is the lifecycle source of truth: issue status, ownership, approvals, and final decisions stay in Linear. These files define work and preserve evidence links; they do not replace Linear or GitHub.
 
+This protocol is opt-in per Linear issue and packet. Factory runs deliberately use a stricter policy than ordinary Pacenotes work: separate implementation and verification lanes plus Richard's recorded Linear decision before merge or release. Outside an explicitly activated factory packet, the general review and merge policy in [`../../AGENTS.md`](../../AGENTS.md) applies.
+
 ## Process
 
 1. Create or update one packet at `docs/factory/<WIL-ID>.md` before implementation.

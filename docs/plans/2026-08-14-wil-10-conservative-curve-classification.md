@@ -1,5 +1,7 @@
 # WIL-10 Conservative Curve Classification Implementation Plan
 
+> **Historical execution note:** This plan preserves commands from before the CI-only Gradle policy. Treat them as provenance and expected-check specifications; do not run Gradle locally. Execute equivalent Gradle checks only through GitHub Actions.
+
 > **For Hermes:** Use subagent-driven-development task-by-task. Run spec review before quality review. Use strict TDD for production behavior.
 
 **Goal:** Make the pure route-geometry classifier conservatively distinguish usable curve candidates from straight lines, short noise, and ambiguous shapes without making driving-safety claims.

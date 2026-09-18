@@ -1,5 +1,7 @@
 # P0-04 Geometry Normalization and Primitives Implementation Plan
 
+> **Historical execution note:** This plan preserves commands from before the CI-only Gradle policy. Treat them as provenance and expected-check specifications; do not run Gradle locally. Execute equivalent Gradle checks only through GitHub Actions.
+
 > **For Hermes:** Use `subagent-driven-development` task-by-task and preserve strict `test-driven-development` RED → GREEN → REFACTOR evidence.
 
 **Goal:** Establish a pure, deterministic geometry foundation for conservative GPX pacenote classification without making any driving, routing, or safety claims.
